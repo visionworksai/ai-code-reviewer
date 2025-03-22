@@ -10,7 +10,7 @@ jobs:
   ai-code-review:
     if: github.event.issue.pull_request && (
           contains(github.event.comment.body, '/gemini-review') ||
-          contains(github.event.comment.body, '/gpt-review') ||
+          contains(github.event.comment.body, '/openai-review') ||
           contains(github.event.comment.body, '/claude-review')
         )
     runs-on: self-hosted
@@ -32,7 +32,7 @@ jobs:
       - name: Set AI Model Type
         id: detect_model
         run: |
-          if [[ "${{ github.event.comment.body }}" == *"/gpt-review"* ]]; then
+          if [[ "${{ github.event.comment.body }}" == *"/openai-review"* ]]; then
             echo "model_type=gpt" >> $GITHUB_OUTPUT
           elif [[ "${{ github.event.comment.body }}" == *"/claude-review"* ]]; then
             echo "model_type=claude" >> $GITHUB_OUTPUT

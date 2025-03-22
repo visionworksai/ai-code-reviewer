@@ -39,7 +39,7 @@ runs:
       id: detect_model
       run: |
         body=$(jq -r .comment.body "$GITHUB_EVENT_PATH")
-        if [[ "$body" == *"/gpt-review"* ]]; then
+        if [[ "$body" == *"/openai-review"* ]]; then
           echo "AI_MODEL_TYPE=gpt" >> $GITHUB_ENV
         elif [[ "$body" == *"/claude-review"* ]]; then
           echo "AI_MODEL_TYPE=claude" >> $GITHUB_ENV
