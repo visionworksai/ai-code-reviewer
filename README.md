@@ -20,6 +20,14 @@ VisionWorks AI Code Reviewer is a reusable GitHub Action that performs automated
   - ✅ Claude by Anthropic
 - 🎯 Exclude specific file types with glob patterns
 - 🔐 Secure – requires each user to define their own secrets
+- Automatic code review on pull requests
+- Detection of bugs, security issues, and performance problems
+- Line-specific comments posted directly to GitHub PRs
+- Support for file exclusion patterns
+- Modular design supporting multiple AI models:
+  - Google Gemini
+  - OpenAI (GPT-4, etc.)
+  - Anthropic Claude (Claude 3 Opus/Sonnet/Haiku)
 
 ---
 
@@ -82,6 +90,8 @@ jobs:
 | `GEMINI_API_KEY` | Required for Gemini reviews                      |
 | `OPENAI_API_KEY` | Required for GPT reviews                         |
 | `CLAUDE_API_KEY` | Required for Claude reviews                      |
+| `ANTHROPIC_API_KEY` | API key for Anthropic Claude (required for Claude model) |
+| `CLAUDE_MODEL` | Specific Claude model to use (default: "claude-3-sonnet-20240229") |
 
 ---
 
@@ -135,4 +145,5 @@ Each repository using this action must define their **own API keys**.
 The action will **fail securely** if required keys are missing.
 
 ---
+
 

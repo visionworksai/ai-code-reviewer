@@ -1,23 +1,26 @@
 from .base_model import BaseAIModel
 from .gemini_model import GeminiModel
 from .openai_model import OpenAIModel
+from .claude_model import ClaudeModel
 
-def get_ai_model(model_type: str = "gemini") -> BaseAIModel:
+def get_ai_model(model_type: str):
     """
-    Factory function to create and return the appropriate AI model instance.
+    Factory method to get the appropriate AI model based on configuration.
     
     Args:
-        model_type: String identifier for the AI model to use
+        model_type: Type of AI model to use ("gemini", "openai", or "claude")
         
     Returns:
-        An instance of a BaseAIModel implementation
+        An instance of BaseAIModel
         
     Raises:
-        ValueError: If the requested model type is not supported
+        ValueError: If the specified model type is not supported
     """
     if model_type.lower() == "gemini":
         return GeminiModel()
     elif model_type.lower() == "openai":
         return OpenAIModel()
+    elif model_type.lower() == "claude":
+        return ClaudeModel()
     else:
         raise ValueError(f"Unsupported AI model type: {model_type}") 
