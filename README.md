@@ -157,3 +157,9 @@ diff_utils.py                    # Diff parsing + filtering
 This action **does not expose or reuse** your secrets.  
 Each repository using this action must define their **own API keys**.  
 The action will **fail securely** if required keys are missing.
+
+## ✅ TODO / Roadmap
+
+- [ ] 🧠 Add support for **DeepSeek** model family  
+- [ ] 🤖 Support for **local models**  
+
