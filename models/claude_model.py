@@ -37,7 +37,7 @@ class ClaudeModel(BaseAIModel):
             List of dictionaries with lineNumber and reviewComment keys
         """
         # Get model name from environment or use default
-        model_name = os.environ.get('CLAUDE_MODEL', 'claude-3-sonnet-20240229')
+        model_name = os.environ.get('CLAUDE_MODEL', 'claude-3-7-sonnet')
         
         # Configure completion parameters
         system_prompt = "You are a skilled code reviewer. Respond with JSON containing code review comments."
