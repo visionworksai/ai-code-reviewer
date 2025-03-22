@@ -29,11 +29,24 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      - name: Set AI Model Type
+        id: detect_model
+        run: |
+          if [[ "${{ github.event.comment.body }}" == *"/gpt-review"* ]]; then
+            echo "model_type=gpt" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.event.comment.body }}" == *"/claude-review"* ]]; then
+            echo "model_type=claude" >> $GITHUB_OUTPUT
+          else
+            echo "model_type=gemini" >> $GITHUB_OUTPUT
+          fi
+
       - name: Run AI Code Review
         env:
           GITHUB_TOKEN: ${{ github.token }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
-          COMMENT_BODY: ${{ github.event.comment.body }}
-        run: python review_code_ai.py
+          GITHUB_EVENT_PATH: ${{ github.event_path }}
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          AI_MODEL_TYPE: ${{ steps.detect_model.outputs.model_type }}
+        run: visionworks_code_reviewer.py
