@@ -17,11 +17,11 @@ class ClaudeModel(BaseAIModel):
         Configure the Anthropic client with API key from environment variables.
         
         Raises:
-            ValueError: If ANTHROPIC_API_KEY environment variable is not set
+            ValueError: If CLAUDE_API_KEY environment variable is not set
         """
-        api_key = os.environ.get('ANTHROPIC_API_KEY')
+        api_key = os.environ.get('CLAUDE_API_KEY')
         if not api_key:
-            raise ValueError("ANTHROPIC_API_KEY environment variable is required")
+            raise ValueError("CLAUDE_API_KEY environment variable is required")
         
         # Configure the Anthropic client
         self.client = anthropic.Anthropic(api_key=api_key)

@@ -90,7 +90,7 @@ jobs:
 | `GEMINI_API_KEY` | Required for Gemini reviews                      |
 | `OPENAI_API_KEY` | Required for GPT reviews                         |
 | `CLAUDE_API_KEY` | Required for Claude reviews                      |
-| `ANTHROPIC_API_KEY` | API key for Anthropic Claude (required for Claude model) |
+| `CLAUDE_API_KEY` | API key for Anthropic Claude (required for Claude model) |
 | `CLAUDE_MODEL` | Specific Claude model to use (default: "claude-3-sonnet-20240229") |
 
 ---
