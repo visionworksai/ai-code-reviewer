@@ -114,8 +114,10 @@ Requirements
 -----------
 - Python 3.7+
 - PyGithub
+- github3.py
 - google-generativeai (for Gemini model)
-- openai (for OpenAI model)
+- google-ai-generativelanguage (for Gemini model)
+- openai>=1.0.0 (for OpenAI model)
 - requests
 - unidiff
 
