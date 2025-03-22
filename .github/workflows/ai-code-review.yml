@@ -49,4 +49,5 @@ jobs:
           GITHUB_EVENT_PATH: ${{ github.event_path }}
           GITHUB_EVENT_NAME: ${{ github.event_name }}
           AI_MODEL_TYPE: ${{ steps.detect_model.outputs.model_type }}
-        run: visionworks_code_reviewer.py
+          INPUT_EXCLUDE: "*.md, docs/**, *.json"
+        run: python visionworks_code_reviewer.py
