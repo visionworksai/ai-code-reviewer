@@ -57,20 +57,54 @@ class OpenAIModel(BaseAIModel):
         }
         
         print(f"Sending prompt to OpenAI model: {model_name}")
+        # Log the completion parameters for debugging
+        print(f"Completion parameters: {json.dumps(completion_params, indent=2)}")
         
-        try:
-            # Call the OpenAI API
-            response = openai.chat.completions.create(**completion_params)
-            
-            # Extract response content
-            response_text = response.choices[0].message.content
-            
-            # Process the response
-            return self._parse_response_json(response_text)
-            
-        except Exception as e:
-            print(f"Error during OpenAI API call: {e}")
-            return []
+        # Maximum number of retries for rate limit errors
+        max_retries = 3
+        retry_count = 0
+        
+        while retry_count <= max_retries:
+            try:
+                # Call the OpenAI API
+                response = openai.chat.completions.create(**completion_params)
+                
+                # Extract response content
+                response_text = response.choices[0].message.content
+                
+                # Process the response
+                return self._parse_response_json(response_text)
+                
+            except openai.RateLimitError as e:
+                retry_count += 1
+                if retry_count <= max_retries:
+                    wait_time = 2 ** retry_count  # Exponential backoff
+                    print(f"Rate limit exceeded. Retrying in {wait_time} seconds... (Attempt {retry_count}/{max_retries})")
+                    import time
+                    time.sleep(wait_time)
+                else:
+                    print(f"Rate limit exceeded and max retries reached: {e}")
+                    return []
+                    
+            except openai.APIError as e:
+                print(f"OpenAI API error: {e}")
+                return []
+                
+            except openai.APIConnectionError as e:
+                print(f"Network error connecting to OpenAI API: {e}")
+                return []
+                
+            except openai.AuthenticationError as e:
+                print(f"Authentication error with OpenAI API: {e}")
+                return []
+                
+            except openai.InvalidRequestError as e:
+                print(f"Invalid request to OpenAI API: {e}")
+                return []
+                
+            except Exception as e:
+                print(f"Unexpected error during OpenAI API call: {e}")
+                return []
     
     def _parse_response_json(self, response_text: str) -> List[Dict[str, str]]:
         """
