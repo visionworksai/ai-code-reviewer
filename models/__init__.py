@@ -1,5 +1,6 @@
 from .base_model import BaseAIModel
 from .gemini_model import GeminiModel
+from .openai_model import OpenAIModel
 
 def get_ai_model(model_type: str = "gemini") -> BaseAIModel:
     """
@@ -16,8 +17,7 @@ def get_ai_model(model_type: str = "gemini") -> BaseAIModel:
     """
     if model_type.lower() == "gemini":
         return GeminiModel()
-    # Add other models here when implemented
-    # elif model_type.lower() == "openai":
-    #     return OpenAIModel()
+    elif model_type.lower() == "openai":
+        return OpenAIModel()
     else:
         raise ValueError(f"Unsupported AI model type: {model_type}") 
