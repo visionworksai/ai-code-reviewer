@@ -1,0 +1,39 @@
+name: AI Code Reviewer
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions: write-all
+
+jobs:
+  ai-code-review:
+    if: github.event.issue.pull_request && (
+          contains(github.event.comment.body, '/gemini-review') ||
+          contains(github.event.comment.body, '/gpt-review') ||
+          contains(github.event.comment.body, '/claude-review')
+        )
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run AI Code Review
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
+          COMMENT_BODY: ${{ github.event.comment.body }}
+        run: python review_code_ai.py
