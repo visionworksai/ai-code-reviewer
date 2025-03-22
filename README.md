@@ -6,7 +6,7 @@ Automated code review powered by **Google Gemini**, **OpenAI**, and **Claude** �
 
 ## 🚀 Overview
 
-VisionWorks AI Code Reviewer is a reusable GitHub Action that performs automated, AI-powered code reviews. When you comment on a pull request (e.g. `/gpt-review`, `/gemini-review`, `/claude-review`), it uses the selected model to analyze the code diff and provide line-by-line feedback.
+VisionWorks AI Code Reviewer is a reusable GitHub Action that performs automated, AI-powered code reviews. When you comment on a pull request (e.g. `/openai-review`, `/gemini-review`, `/claude-review`), it uses the selected model to analyze the code diff and provide line-by-line feedback.
 
 ---
 
@@ -61,7 +61,7 @@ jobs:
 
 2. Add **secrets** to your GitHub repo settings:
    - `GEMINI_API_KEY` – required for Gemini reviews
-   - `OPENAI_API_KEY` – required for GPT reviews
+   - `OPENAI_API_KEY` – required for OpenAI reviews
    - `CLAUDE_API_KEY` – required for Claude reviews
 
 ---
@@ -73,25 +73,35 @@ jobs:
 
 ```
 /gemini-review
-/gpt-review
+/openai-review
 /claude-review
 ```
 
 3. The action will detect the model, run the review, and add comments.
 
+To override a specific model version:
+
+```yaml
+with:
+  CLAUDE_MODEL: claude-3-haiku-20240307
+  OPENAI_MODEL: gpt-4
+  GEMINI_MODEL: gemini-1.5-flash-001
+```
+
 ---
 
 ## 🔧 Configuration
 
-| Variable         | Description                                      |
-|------------------|--------------------------------------------------|
-| `INPUT_EXCLUDE`  | Comma-separated list of file globs to ignore     |
-| `AI_MODEL_TYPE`  | Auto-detected from PR comment (no need to set!)  |
-| `GEMINI_API_KEY` | Required for Gemini reviews                      |
-| `OPENAI_API_KEY` | Required for GPT reviews                         |
-| `CLAUDE_API_KEY` | Required for Claude reviews                      |
-| `CLAUDE_API_KEY` | API key for Anthropic Claude (required for Claude model) |
-| `CLAUDE_MODEL` | Specific Claude model to use (default: "claude-3-sonnet-20240229") |
+| Variable           | Description                                                  |
+|--------------------|--------------------------------------------------------------|
+| `INPUT_EXCLUDE`    | Comma-separated list of file globs to ignore                 |
+| `AI_MODEL_TYPE`    | Auto-detected from PR comment (no need to set manually)      |
+| `GEMINI_API_KEY`   | Required for Gemini reviews                                  |
+| `GEMINI_MODEL`     | Optional: override Gemini model name                         |
+| `OPENAI_API_KEY`   | Required for OpenAI reviews                                  |
+| `OPENAI_MODEL`     | Optional: override OpenAI model name                         |
+| `CLAUDE_API_KEY`   | Required for Claude reviews                                  |
+| `CLAUDE_MODEL`     | Optional: override Claude model name                         |
 
 ---
 
@@ -130,11 +140,15 @@ diff_utils.py                    # Diff parsing + filtering
 
 ## 🤖 Model Comparison
 
-| Model     | Strengths                          | Notes             |
-|-----------|------------------------------------|-------------------|
-| Gemini    | Fast + Cost-efficient              | Great default     |
-| OpenAI    | High-quality (GPT-4 etc.)          | Higher cost       |
-| Claude    | Efficient for large-context review | Claude API needed |
+| Model                    | Strengths                          | Notes                              |
+|--------------------------|------------------------------------|------------------------------------|
+| **Gemini** (Google)      | Fast + Cost-efficient              | Great default; free tier available |
+| **OpenAI GPT**           | High-quality (GPT-4 etc.)          | Higher cost                        |
+| **Claude 3 Sonnet**      | Balanced performance & speed       | Good general-purpose               |
+| **Claude 3 Haiku**       | Fastest & cheapest Claude option   | Best for cost-sensitive use        |
+| **Claude 3 Opus**        | Most powerful Claude model         | Highest cost                       |
+
+> You can override the default model with e.g. `CLAUDE_MODEL: claude-3-haiku-20240307`.
 
 ---
 
@@ -143,7 +157,3 @@ diff_utils.py                    # Diff parsing + filtering
 This action **does not expose or reuse** your secrets.  
 Each repository using this action must define their **own API keys**.  
 The action will **fail securely** if required keys are missing.
-
----
-
-
