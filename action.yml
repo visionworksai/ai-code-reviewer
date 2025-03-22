@@ -5,7 +5,7 @@ author: "visionworksai"
 inputs:
   GEMINI_API_KEY:
     description: "Google Gemini API key"
-    required: true
+    required: false
   OPENAI_API_KEY:
     description: "OpenAI GPT API key"
     required: false
@@ -30,6 +30,20 @@ runs:
           echo "AI_MODEL_TYPE=claude" >> $GITHUB_ENV
         else
           echo "AI_MODEL_TYPE=gemini" >> $GITHUB_ENV
+        fi
+      shell: bash
+
+    - name: Fail if required secret is missing
+      run: |
+        if [[ "$AI_MODEL_TYPE" == "gpt" && -z "${{ inputs.OPENAI_API_KEY }}" ]]; then
+          echo "❌ OPENAI_API_KEY is missing. Please add it to your repo secrets."
+          exit 1
+        elif [[ "$AI_MODEL_TYPE" == "claude" && -z "${{ inputs.CLAUDE_API_KEY }}" ]]; then
+          echo "❌ CLAUDE_API_KEY is missing. Please add it to your repo secrets."
+          exit 1
+        elif [[ "$AI_MODEL_TYPE" == "gemini" && -z "${{ inputs.GEMINI_API_KEY }}" ]]; then
+          echo "❌ GEMINI_API_KEY is missing. Please add it to your repo secrets."
+          exit 1
         fi
       shell: bash
 
