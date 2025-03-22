@@ -1,13 +1,13 @@
 VisionWorks AI Code Reviewer
 ============================
 
-An automated code review tool that uses AI models to analyze pull requests and provide intelligent code review comments.
+An automated code review tool that uses AI models (Gemini and OpenAI) to analyze pull requests and provide intelligent code review comments.
 
 Overview
 --------
 VisionWorks AI Code Reviewer is a GitHub Action that automatically reviews pull requests using AI models. It analyzes code changes, identifies potential issues, and provides constructive feedback directly in the pull request.
 
-The tool supports different AI models through a modular architecture, with Gemini AI currently implemented and ready for expansion to other models like OpenAI in the future.
+The tool supports multiple AI models through a modular architecture, with both Google's Gemini AI and OpenAI's models currently implemented.
 
 Features
 --------
@@ -15,7 +15,9 @@ Features
 - Detection of bugs, security issues, and performance problems
 - Line-specific comments posted directly to GitHub PRs
 - Support for file exclusion patterns
-- Modular design for integrating multiple AI models
+- Modular design supporting multiple AI models:
+  - Google Gemini
+  - OpenAI (GPT-4, etc.)
 
 Installation
 -----------
@@ -50,16 +52,21 @@ Installation
          - name: Run AI Code Review
            env:
              GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+             # For Gemini
              GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
              GEMINI_MODEL: "gemini-2.0-flash-001"
-             AI_MODEL_TYPE: "gemini"
+             # For OpenAI
+             # OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+             # OPENAI_MODEL: "gpt-4"
+             AI_MODEL_TYPE: "gemini"  # Change to "openai" if using OpenAI
              INPUT_EXCLUDE: "*.md,*.txt,*.png,*.jpg"
            run: python visionworks_code_reviewer.py
    ```
 
 2. Add required secrets to your GitHub repository:
    - GITHUB_TOKEN: Automatically provided by GitHub Actions
-   - GEMINI_API_KEY: Your Google Gemini API key
+   - GEMINI_API_KEY: Your Google Gemini API key (for Gemini model)
+   - OPENAI_API_KEY: Your OpenAI API key (for OpenAI model)
 
 Usage
 -----
@@ -71,10 +78,18 @@ Configuration
 ------------
 The following environment variables can be configured:
 
+Common:
+- AI_MODEL_TYPE: Which AI model to use ("gemini" or "openai")
+- INPUT_EXCLUDE: Comma-separated list of file patterns to exclude (e.g., "*.md,*.json")
+
+For Gemini:
 - GEMINI_API_KEY: API key for Google Gemini (required for Gemini model)
 - GEMINI_MODEL: Specific Gemini model to use (default: "gemini-2.0-flash-001")
-- AI_MODEL_TYPE: Which AI model to use (currently only "gemini")
-- INPUT_EXCLUDE: Comma-separated list of file patterns to exclude (e.g., "*.md,*.json")
+
+For OpenAI:
+- OPENAI_API_KEY: API key for OpenAI (required for OpenAI model)
+- OPENAI_MODEL: Specific OpenAI model to use (default: "gpt-4")
+- OPENAI_ORGANIZATION: Optional organization ID if you have multiple organizations
 
 Project Structure
 ----------------
@@ -83,7 +98,7 @@ Project Structure
   - __init__.py: Factory method for getting the right AI model
   - base_model.py: Abstract base class for all AI models
   - gemini_model.py: Implementation for Google Gemini
-  - openai_model.py: Placeholder for future OpenAI implementation
+  - openai_model.py: Implementation for OpenAI models
 - github_utils.py: GitHub API interaction utilities
 - diff_utils.py: Git diff parsing and filtering utilities
 
@@ -99,10 +114,14 @@ Requirements
 -----------
 - Python 3.7+
 - PyGithub
-- google-generativeai
+- google-generativeai (for Gemini model)
+- openai (for OpenAI model)
 - requests
 - unidiff
 
-Contributing
------------
-Contributions are welcome! Please feel free to submit a Pull Request.
+Comparing AI Models
+------------------
+- Gemini: Google's AI model, good for code analysis with lower cost
+- OpenAI: Powerful GPT models like GPT-4, potentially more comprehensive reviews but higher cost
+
+Choose the model that best fits your needs and budget.
