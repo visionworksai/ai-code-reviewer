@@ -1,0 +1,46 @@
+name: AI Code Reviewer
+description: "PR changes are reviewed by Gemini / GPT / Claude"
+author: "visionworksai"
+
+inputs:
+  GEMINI_API_KEY:
+    description: "Google Gemini API key"
+    required: true
+  OPENAI_API_KEY:
+    description: "OpenAI GPT API key"
+    required: false
+  CLAUDE_API_KEY:
+    description: "Anthropic Claude API key"
+    required: false
+  AI_MODEL_TYPE:
+    description: "AI model to use (gemini, gpt, claude)"
+    required: true
+  INPUT_EXCLUDE:
+    description: "Comma-separated list of excluded file patterns"
+    required: false
+    default: ""
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.10"
+
+    - name: Install dependencies
+      run: pip install -r ${{ github.action_path }}/requirements.txt
+      shell: bash
+
+    - name: Run AI Code Reviewer
+      run: python ${{ github.action_path }}/visionworks_code_reviewer.py
+      shell: bash
+      env:
+        GEMINI_API_KEY: ${{ inputs.GEMINI_API_KEY }}
+        OPENAI_API_KEY: ${{ inputs.OPENAI_API_KEY }}
+        CLAUDE_API_KEY: ${{ inputs.CLAUDE_API_KEY }}
+        AI_MODEL_TYPE: ${{ inputs.AI_MODEL_TYPE }}
+        INPUT_EXCLUDE: ${{ inputs.INPUT_EXCLUDE }}
+        GITHUB_TOKEN: ${{ github.token }}
+        GITHUB_EVENT_PATH: ${{ github.event_path }}
+        GITHUB_EVENT_NAME: ${{ github.event_name }}
