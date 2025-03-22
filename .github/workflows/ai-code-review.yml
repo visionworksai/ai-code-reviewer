@@ -33,7 +33,7 @@ jobs:
         id: detect_model
         run: |
           if [[ "${{ github.event.comment.body }}" == *"/openai-review"* ]]; then
-            echo "model_type=gpt" >> $GITHUB_OUTPUT
+            echo "model_type=openai" >> $GITHUB_OUTPUT
           elif [[ "${{ github.event.comment.body }}" == *"/claude-review"* ]]; then
             echo "model_type=claude" >> $GITHUB_OUTPUT
           else

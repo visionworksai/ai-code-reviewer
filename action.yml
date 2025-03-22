@@ -1,5 +1,5 @@
 name: AI Code Reviewer
-description: "PR changes are reviewed by Gemini / GPT / Claude"
+description: "PR changes are reviewed by Gemini / openai / Claude"
 author: "visionworksai"
 
 inputs:
@@ -12,12 +12,12 @@ inputs:
     default: "gemini-1.5-flash-001"
 
   OPENAI_API_KEY:
-    description: "OpenAI GPT API key"
+    description: "OpenAI openai API key"
     required: false
   OPENAI_MODEL:
     description: "OpenAI model name"
     required: false
-    default: "gpt-4"
+    default: "openai-4"
 
   CLAUDE_API_KEY:
     description: "Anthropic Claude API key"
@@ -40,7 +40,7 @@ runs:
       run: |
         body=$(jq -r .comment.body "$GITHUB_EVENT_PATH")
         if [[ "$body" == *"/openai-review"* ]]; then
-          echo "AI_MODEL_TYPE=gpt" >> $GITHUB_ENV
+          echo "AI_MODEL_TYPE=openai" >> $GITHUB_ENV
         elif [[ "$body" == *"/claude-review"* ]]; then
           echo "AI_MODEL_TYPE=claude" >> $GITHUB_ENV
         else
@@ -50,7 +50,7 @@ runs:
 
     - name: Fail if required secret is missing
       run: |
-        if [[ "$AI_MODEL_TYPE" == "gpt" && -z "${{ inputs.OPENAI_API_KEY }}" ]]; then
+        if [[ "$AI_MODEL_TYPE" == "openai" && -z "${{ inputs.OPENAI_API_KEY }}" ]]; then
           echo "❌ OPENAI_API_KEY is missing. Please add it to your repo secrets."
           exit 1
         elif [[ "$AI_MODEL_TYPE" == "claude" && -z "${{ inputs.CLAUDE_API_KEY }}" ]]; then
