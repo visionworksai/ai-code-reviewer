@@ -1,129 +1,138 @@
-VisionWorks AI Code Reviewer
-============================
+# ✅ VisionWorks AI Code Reviewer
 
-An automated code review tool that uses AI models (Gemini and OpenAI) to analyze pull requests and provide intelligent code review comments.
+Automated code review powered by **Google Gemini**, **OpenAI**, and **Claude** – triggered by PR comments.
 
-Overview
---------
-VisionWorks AI Code Reviewer is a GitHub Action that automatically reviews pull requests using AI models. It analyzes code changes, identifies potential issues, and provides constructive feedback directly in the pull request.
+---
 
-The tool supports multiple AI models through a modular architecture, with both Google's Gemini AI and OpenAI's models currently implemented.
+## 🚀 Overview
 
-Features
---------
-- Automatic code review on pull requests
-- Detection of bugs, security issues, and performance problems
-- Line-specific comments posted directly to GitHub PRs
-- Support for file exclusion patterns
-- Modular design supporting multiple AI models:
-  - Google Gemini
-  - OpenAI (GPT-4, etc.)
+VisionWorks AI Code Reviewer is a reusable GitHub Action that performs automated, AI-powered code reviews. When you comment on a pull request (e.g. `/gpt-review`, `/gemini-review`, `/claude-review`), it uses the selected model to analyze the code diff and provide line-by-line feedback.
 
-Installation
------------
-1. Add the GitHub Action to your repository workflow:
+---
 
-   ```yml
-   name: AI Code Review
+## ✨ Features
 
-   on:
-     issue_comment:
-       types: [created]
+- 🔍 Analyzes pull request diffs
+- 💡 AI-generated, line-level review comments
+- 🧠 Supports multiple AI providers:
+  - ✅ Google Gemini
+  - ✅ OpenAI GPT
+  - ✅ Claude by Anthropic
+- 🎯 Exclude specific file types with glob patterns
+- 🔐 Secure – requires each user to define their own secrets
 
-   jobs:
-     review:
-       runs-on: ubuntu-latest
-       if: github.event.comment.body == '/review'
-       steps:
-         - uses: actions/checkout@v3
-           with:
-             fetch-depth: 0
-         
-         - name: Set up Python
-           uses: actions/setup-python@v4
-           with:
-             python-version: '3.10'
-             
-         - name: Install dependencies
-           run: |
-             python -m pip install --upgrade pip
-             pip install -r requirements.txt
-             
-         - name: Run AI Code Review
-           env:
-             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-             # For Gemini
-             GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-             GEMINI_MODEL: "gemini-2.0-flash-001"
-             # For OpenAI
-             # OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-             # OPENAI_MODEL: "gpt-4"
-             AI_MODEL_TYPE: "gemini"  # Change to "openai" if using OpenAI
-             INPUT_EXCLUDE: "*.md,*.txt,*.png,*.jpg"
-           run: python visionworks_code_reviewer.py
-   ```
+---
 
-2. Add required secrets to your GitHub repository:
-   - GITHUB_TOKEN: Automatically provided by GitHub Actions
-   - GEMINI_API_KEY: Your Google Gemini API key (for Gemini model)
-   - OPENAI_API_KEY: Your OpenAI API key (for OpenAI model)
+## ⚙️ Installation (in your repo)
 
-Usage
------
-1. Create a pull request in your repository
-2. Comment "/review" on the pull request
-3. The action will run and add review comments to your pull request
+1. Create a workflow file in `.github/workflows/ai-review.yml`:
 
-Configuration
-------------
-The following environment variables can be configured:
+```yaml
+name: AI Code Review
 
-Common:
-- AI_MODEL_TYPE: Which AI model to use ("gemini" or "openai")
-- INPUT_EXCLUDE: Comma-separated list of file patterns to exclude (e.g., "*.md,*.json")
+on:
+  issue_comment:
+    types: [created]
 
-For Gemini:
-- GEMINI_API_KEY: API key for Google Gemini (required for Gemini model)
-- GEMINI_MODEL: Specific Gemini model to use (default: "gemini-2.0-flash-001")
+permissions: write-all
 
-For OpenAI:
-- OPENAI_API_KEY: API key for OpenAI (required for OpenAI model)
-- OPENAI_MODEL: Specific OpenAI model to use (default: "gpt-4")
-- OPENAI_ORGANIZATION: Optional organization ID if you have multiple organizations
+jobs:
+  ai-review:
+    runs-on: self-hosted  # or ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
-Project Structure
-----------------
-- visionworks_code_reviewer.py: Main application file
-- models/: Directory containing AI model implementations
-  - __init__.py: Factory method for getting the right AI model
-  - base_model.py: Abstract base class for all AI models
-  - gemini_model.py: Implementation for Google Gemini
-  - openai_model.py: Implementation for OpenAI models
-- github_utils.py: GitHub API interaction utilities
-- diff_utils.py: Git diff parsing and filtering utilities
+      - name: Run AI Reviewer
+        uses: visionworksai/ai-code-reviewer@main
+        with:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
+          INPUT_EXCLUDE: "*.md, docs/**"
+```
 
-Adding New AI Models
--------------------
-To add a new AI model:
+2. Add **secrets** to your GitHub repo settings:
+   - `GEMINI_API_KEY` – required for Gemini reviews
+   - `OPENAI_API_KEY` – required for GPT reviews
+   - `CLAUDE_API_KEY` – required for Claude reviews
 
-1. Create a new file in the models/ directory (e.g., models/new_model.py)
-2. Implement the BaseAIModel abstract class
-3. Add the new model to the factory method in models/__init__.py
+---
 
-Requirements
------------
+## 🧑‍💻 Usage
+
+1. Open a pull request
+2. Comment one of the following:
+
+```
+/gemini-review
+/gpt-review
+/claude-review
+```
+
+3. The action will detect the model, run the review, and add comments.
+
+---
+
+## 🔧 Configuration
+
+| Variable         | Description                                      |
+|------------------|--------------------------------------------------|
+| `INPUT_EXCLUDE`  | Comma-separated list of file globs to ignore     |
+| `AI_MODEL_TYPE`  | Auto-detected from PR comment (no need to set!)  |
+| `GEMINI_API_KEY` | Required for Gemini reviews                      |
+| `OPENAI_API_KEY` | Required for GPT reviews                         |
+| `CLAUDE_API_KEY` | Required for Claude reviews                      |
+
+---
+
+## 🧱 Project Structure
+
+```
+visionworks_code_reviewer.py     # Main entry point
+models/
+  ├── __init__.py                # Model factory
+  ├── base_model.py              # Base class
+  ├── gemini_model.py            # Gemini implementation
+  ├── openai_model.py            # OpenAI implementation
+  └── claude_model.py            # Claude implementation
+github_utils.py                  # GitHub API helpers
+diff_utils.py                    # Diff parsing + filtering
+```
+
+---
+
+## ➕ Adding New Models
+
+1. Create a new file under `models/` (e.g. `models/my_model.py`)
+2. Implement `BaseAIModel`
+3. Register your model in `models/__init__.py`
+
+---
+
+## 🧪 Requirements
+
 - Python 3.7+
-- PyGithub
-- github3.py
-- google-generativeai (for Gemini model)
-- google-ai-generativelanguage (for Gemini model)
-- openai>=1.0.0 (for OpenAI model)
-- requests
-- unidiff
+- `PyGithub`, `github3.py`, `openai>=1.0.0`
+- `google-generativeai`, `google-ai-generativelanguage`
+- `requests`, `unidiff`
 
-Comparing AI Models
-------------------
-- Gemini: Google's AI model, good for code analysis with lower cost
-- OpenAI: Powerful GPT models like GPT-4, potentially more comprehensive reviews but higher cost
+---
 
-Choose the model that best fits your needs and budget.
+## 🤖 Model Comparison
+
+| Model     | Strengths                          | Notes             |
+|-----------|------------------------------------|-------------------|
+| Gemini    | Fast + Cost-efficient              | Great default     |
+| OpenAI    | High-quality (GPT-4 etc.)          | Higher cost       |
+| Claude    | Efficient for large-context review | Claude API needed |
+
+---
+
+## 🛡️ Security Note
+
+This action **does not expose or reuse** your secrets.  
+Each repository using this action must define their **own API keys**.  
+The action will **fail securely** if required keys are missing.
+
+---
+
