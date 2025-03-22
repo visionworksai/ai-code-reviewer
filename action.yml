@@ -12,9 +12,6 @@ inputs:
   CLAUDE_API_KEY:
     description: "Anthropic Claude API key"
     required: false
-  AI_MODEL_TYPE:
-    description: "AI model to use (gemini, gpt, claude)"
-    required: true
   INPUT_EXCLUDE:
     description: "Comma-separated list of excluded file patterns"
     required: false
@@ -23,6 +20,19 @@ inputs:
 runs:
   using: "composite"
   steps:
+    - name: Detect AI Model Type from PR comment
+      id: detect_model
+      run: |
+        body=$(jq -r .comment.body "$GITHUB_EVENT_PATH")
+        if [[ "$body" == *"/gpt-review"* ]]; then
+          echo "AI_MODEL_TYPE=gpt" >> $GITHUB_ENV
+        elif [[ "$body" == *"/claude-review"* ]]; then
+          echo "AI_MODEL_TYPE=claude" >> $GITHUB_ENV
+        else
+          echo "AI_MODEL_TYPE=gemini" >> $GITHUB_ENV
+        fi
+      shell: bash
+
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
@@ -39,8 +49,8 @@ runs:
         GEMINI_API_KEY: ${{ inputs.GEMINI_API_KEY }}
         OPENAI_API_KEY: ${{ inputs.OPENAI_API_KEY }}
         CLAUDE_API_KEY: ${{ inputs.CLAUDE_API_KEY }}
-        AI_MODEL_TYPE: ${{ inputs.AI_MODEL_TYPE }}
         INPUT_EXCLUDE: ${{ inputs.INPUT_EXCLUDE }}
+        AI_MODEL_TYPE: ${{ env.AI_MODEL_TYPE }}
         GITHUB_TOKEN: ${{ github.token }}
         GITHUB_EVENT_PATH: ${{ github.event_path }}
         GITHUB_EVENT_NAME: ${{ github.event_name }}
