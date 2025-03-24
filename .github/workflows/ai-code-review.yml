@@ -9,11 +9,11 @@ permissions: write-all
 jobs:
   ai-code-review:
     if: github.event.issue.pull_request && (
-          contains(github.event.comment.body, '/gemini-review') ||
-          contains(github.event.comment.body, '/openai-review') ||
-          contains(github.event.comment.body, '/claude-review') ||
-          contains(github.event.comment.body, '/llama-review')
-        )
+      contains(github.event.comment.body, '/gemini-review') ||
+      contains(github.event.comment.body, '/openai-review') ||
+      contains(github.event.comment.body, '/claude-review') ||
+      contains(github.event.comment.body, '/llama-review')
+      )
 
     runs-on: self-hosted
 
@@ -26,7 +26,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10'
+          python-version: "3.10"
 
       - name: Install system packages and Python deps
         run: |
@@ -43,11 +43,12 @@ jobs:
           echo "✅ g++: $(which g++)"
           echo "✅ cmake: $(which cmake)"
 
-          # Pre-install llama-cpp-python with compiler environment
-          CC=$(which gcc) CXX=$(which g++) pip install llama-cpp-python
+          # Add execute permission to the installation script
+          chmod +x install_script.sh
+          # Run the installation script
+          ./install_script.sh
 
-          # Then install other Python deps
-          pip install -r requirements.txt
+          CC=$(which gcc) CXX=$(which g++) pip install --verbose -r requirements.txt
 
       - name: Set AI Model Type
         id: detect_model
