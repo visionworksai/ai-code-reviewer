@@ -147,7 +147,8 @@ def get_github_client():
         raise ValueError("GITHUB_TOKEN environment variable is required")
     return Github(github_token)
 
-def s() -> PRInfo:
+# def s() -> PRInfo:
+def information_for_pr_review() -> PRInfo:
     """
     Extract pull request details from GitHub Actions event payload.
     
