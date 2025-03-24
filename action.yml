@@ -40,17 +40,23 @@ runs:
       shell: bash
       run: |
         body=$(jq -r .comment.body "$GITHUB_EVENT_PATH")
+        echo "Comment body: $body"
+
         if [[ "$body" == *"/openai-review"* ]]; then
           echo "AI_MODEL_TYPE=openai" >> $GITHUB_ENV
         elif [[ "$body" == *"/claude-review"* ]]; then
           echo "AI_MODEL_TYPE=claude" >> $GITHUB_ENV
-        else
+        elif [[ "$body" == *"/gemini-review"* ]]; then
           echo "AI_MODEL_TYPE=gemini" >> $GITHUB_ENV
+        else
+          echo "❌ AI model type could not be detected from comment"
+          exit 1
         fi
 
     - name: 🔒 Validate Required API Key
       shell: bash
       run: |
+        echo "AI_MODEL_TYPE is: $AI_MODEL_TYPE"
         case "$AI_MODEL_TYPE" in
           openai)
             [[ -z "${{ inputs.OPENAI_API_KEY }}" ]] && echo "❌ OPENAI_API_KEY is missing." && exit 1
@@ -60,6 +66,10 @@ runs:
             ;;
           gemini)
             [[ -z "${{ inputs.GEMINI_API_KEY }}" ]] && echo "❌ GEMINI_API_KEY is missing." && exit 1
+            ;;
+          *)
+            echo "❌ Unknown AI_MODEL_TYPE: $AI_MODEL_TYPE"
+            exit 1
             ;;
         esac
 
@@ -76,14 +86,14 @@ runs:
       shell: bash
       run: python "${{ github.action_path }}/visionworks_code_reviewer.py"
       env:
-        GEMINI_API_KEY:  ${{ inputs.GEMINI_API_KEY }}
-        GEMINI_MODEL:    ${{ inputs.GEMINI_MODEL }}
-        OPENAI_API_KEY:  ${{ inputs.OPENAI_API_KEY }}
-        OPENAI_MODEL:    ${{ inputs.OPENAI_MODEL }}
-        CLAUDE_API_KEY:  ${{ inputs.CLAUDE_API_KEY }}
-        CLAUDE_MODEL:    ${{ inputs.CLAUDE_MODEL }}
-        INPUT_EXCLUDE:   ${{ inputs.INPUT_EXCLUDE }}
-        AI_MODEL_TYPE:   ${{ env.AI_MODEL_TYPE }}
-        GITHUB_TOKEN:    ${{ github.token }}
-        GITHUB_EVENT_PATH: ${{ github.event_path }}
-        GITHUB_EVENT_NAME: ${{ github.event_name }}
+        GEMINI_API_KEY:      ${{ inputs.GEMINI_API_KEY }}
+        GEMINI_MODEL:        ${{ inputs.GEMINI_MODEL }}
+        OPENAI_API_KEY:      ${{ inputs.OPENAI_API_KEY }}
+        OPENAI_MODEL:        ${{ inputs.OPENAI_MODEL }}
+        CLAUDE_API_KEY:      ${{ inputs.CLAUDE_API_KEY }}
+        CLAUDE_MODEL:        ${{ inputs.CLAUDE_MODEL }}
+        INPUT_EXCLUDE:       ${{ inputs.INPUT_EXCLUDE }}
+        AI_MODEL_TYPE:       ${{ env.AI_MODEL_TYPE }}
+        GITHUB_TOKEN:        ${{ github.token }}
+        GITHUB_EVENT_PATH:   ${{ github.event_path }}
+        GITHUB_EVENT_NAME:   ${{ github.event_name }}
