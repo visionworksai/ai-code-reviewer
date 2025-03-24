@@ -55,7 +55,7 @@ jobs:
           python3 -m pip install --force-reinstall --no-cache-dir -r requirements.txt
 
       - name: Run AI Code Reviewer Action
-        uses: ./  # local action in the root directory
+        uses: ./ai-code-reviewer
         with:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
