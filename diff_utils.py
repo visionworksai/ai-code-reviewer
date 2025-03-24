@@ -1,7 +1,7 @@
 from typing import List, Dict, Any
-import fnmatch
+import re
 
-def parse_diff(diff_str: str) -> List[Dict[str, Any]]:
+def git_diff_parser(diff_str: str) -> List[Dict[str, Any]]:
     """
     Parse a git diff string into a structured format for processing.
     
@@ -14,34 +14,66 @@ def parse_diff(diff_str: str) -> List[Dict[str, Any]]:
     files = []
     current_file = None
     current_hunk = None
-
+    
+    # Regex patterns for different parts of the diff
+    file_header_pattern = re.compile(r'^diff --git a/(.+) b/(.+)$')
+    old_file_pattern = re.compile(r'^--- a/(.+)$')
+    new_file_pattern = re.compile(r'^\+\+\+ b/(.+)$')
+    hunk_header_pattern = re.compile(r'^@@ -([\d,]+) \+([\d,]+) @@(.*)$')
+    
     # Process the diff line by line
     for line in diff_str.splitlines():
-        if line.startswith('diff --git'):
-            # Start of a new file
+        # Check for file header
+        file_match = file_header_pattern.match(line)
+        if file_match:
             if current_file:
                 files.append(current_file)
             current_file = {'path': '', 'hunks': []}
-
-        elif line.startswith('--- a/'):
-            # Old file path
-            if current_file:
-                current_file['path'] = line[6:]
-
-        elif line.startswith('+++ b/'):
-            # New file path
-            if current_file:
-                current_file['path'] = line[6:]
-
-        elif line.startswith('@@'):
-            # Start of a new hunk
-            if current_file:
-                current_hunk = {'header': line, 'lines': []}
-                current_file['hunks'].append(current_hunk)
-
-        elif current_hunk is not None:
-            # Content of the current hunk
-            current_hunk['lines'].append(line)
+            continue
+            
+        # Check for old file path
+        old_file_match = old_file_pattern.match(line)
+        if old_file_match and current_file:
+            current_file['old_path'] = old_file_match.group(1)
+            continue
+            
+        # Check for new file path
+        new_file_match = new_file_pattern.match(line)
+        if new_file_match and current_file:
+            current_file['path'] = new_file_match.group(1)
+            continue
+            
+        # Check for hunk header
+        hunk_match = hunk_header_pattern.match(line)
+        if hunk_match and current_file:
+            old_range = hunk_match.group(1)
+            new_range = hunk_match.group(2)
+            description = hunk_match.group(3).strip()
+            current_hunk = {
+                'header': line,
+                'old_range': old_range,
+                'new_range': new_range,
+                'description': description,
+                'lines': []
+            }
+            current_file['hunks'].append(current_hunk)
+            continue
+            
+        # Content lines
+        if current_hunk is not None:
+            # Add metadata about line type: added, removed, context
+            line_type = None
+            if line.startswith('+'):
+                line_type = 'added'
+            elif line.startswith('-'):
+                line_type = 'removed'
+            elif line.startswith(' '):
+                line_type = 'context'
+                
+            current_hunk['lines'].append({
+                'content': line,
+                'type': line_type
+            })
 
     # Add the last file if there is one
     if current_file:
@@ -49,7 +81,7 @@ def parse_diff(diff_str: str) -> List[Dict[str, Any]]:
 
     return files
 
-def filter_diff_by_patterns(parsed_diff: List[Dict[str, Any]], exclude_patterns: List[str]) -> List[Dict[str, Any]]:
+def filter_diff_by_patterns(parsed_diff: List[Dict[str, Any]], filter_patterns: List[str]) -> List[Dict[str, Any]]:
     """
     Filter the parsed diff to exclude files matching specific patterns.
     
@@ -61,21 +93,39 @@ def filter_diff_by_patterns(parsed_diff: List[Dict[str, Any]], exclude_patterns:
         Filtered list of file dictionaries
     """
     # Skip empty patterns
-    if not exclude_patterns or all(not pattern for pattern in exclude_patterns):
+    if not filter_patterns or all(not pattern for pattern in filter_patterns):
         return parsed_diff
+    
+    # Convert glob patterns to regex patterns
+    regex_patterns = [_glob_to_regex(pattern) for pattern in filter_patterns if pattern]
     
     # Filter out files that match any of the exclude patterns
     filtered = [
         file for file in parsed_diff
         if not any(
-            fnmatch.fnmatch(file.get('path', ''), pattern) 
-            for pattern in exclude_patterns 
-            if pattern
+            re.match(pattern, file.get('path', '')) 
+            for pattern in regex_patterns
         )
     ]
     
-    excluded_count = len(parsed_diff) - len(filtered)
-    if excluded_count > 0:
-        print(f"Excluded {excluded_count} files based on patterns: {exclude_patterns}")
+    filtered_count = len(parsed_diff) - len(filtered)
+    if filtered_count > 0:
+        print(f"Filtered {filtered_count} files based on patterns: {filter_patterns}")
     
     return filtered
+
+def _glob_to_regex(pattern: str) -> str:
+    """
+    Convert a glob pattern to a regular expression pattern.
+    
+    Args:
+        pattern: Glob pattern (e.g., "*.py", "src/**/*.js")
+        
+    Returns:
+        Regular expression pattern
+    """
+    # Escape special regex characters except those used in glob patterns
+    pattern = re.escape(pattern).replace('\\*\\*', '.*').replace('\\*', '[^/]*').replace('\\?', '.')
+    
+    # Make sure the pattern matches the entire string
+    return f'^{pattern}$'

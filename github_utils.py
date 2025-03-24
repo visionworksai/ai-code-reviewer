@@ -1,27 +1,126 @@
 import os
 import json
 import requests
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from github import Github
-from unidiff import Hunk, PatchedFile
+import re
 
-class PRDetails:
+class PatchedFile:
+    """    
+    Attributes:
+        path: The file path
+        hunks: List of code hunks in the file
+    """
+    def __init__(self, path: str):
+        self.path = path
+        self.hunks = []
+        self.source_file = f"a/{path}"
+        self.target_file = f"b/{path}"
+
+class Hunk:
+    """    
+    Attributes:
+        source_start: Starting line number in the original file
+        source_length: Number of lines in the original file section
+        target_start: Starting line number in the modified file
+        target_length: Number of lines in the modified file section
+        content: The actual diff content of the hunk
+    """
+    def __init__(self, header: str, content: str):
+        self.content = content
+        # Parse the hunk header to extract line numbers
+        match = re.match(r'^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@', header)
+        if match:
+            self.source_start = int(match.group(1))
+            self.source_length = int(match.group(2) or 1)
+            self.target_start = int(match.group(3))
+            self.target_length = int(match.group(4) or 1)
+        else:
+            self.source_start = 0
+            self.source_length = 0
+            self.target_start = 0
+            self.target_length = 0
+
+def parse_git_diff(diff_text: str) -> List[PatchedFile]:
+    """
+    Parse git diff text into PatchedFile objects with Hunks.
+    
+    Args:
+        diff_text: Raw git diff string
+        
+    Returns:
+        List of PatchedFile objects
+    """
+    files = []
+    current_file = None
+    current_hunk = None
+    hunk_lines = []
+    
+    # File path pattern matching
+    file_pattern = re.compile(r'^(\+\+\+ b/|--- a/)(.+)$')
+    hunk_pattern = re.compile(r'^@@ .+ @@')
+    
+    for line in diff_text.splitlines():
+        # New file
+        if line.startswith('diff --git'):
+            if current_file and current_hunk:
+                current_hunk.content = '\n'.join(hunk_lines)
+                current_file.hunks.append(current_hunk)
+                hunk_lines = []
+            
+            if current_file:
+                files.append(current_file)
+            
+            current_file = None
+            current_hunk = None
+            
+        # File info
+        elif line.startswith('+++ b/'):
+            match = file_pattern.match(line)
+            if match:
+                path = match.group(2)
+                current_file = PatchedFile(path)
+                
+        # Hunk header
+        elif hunk_pattern.match(line):
+            if current_file:
+                if current_hunk:
+                    current_hunk.content = '\n'.join(hunk_lines)
+                    current_file.hunks.append(current_hunk)
+                    hunk_lines = []
+                    
+                current_hunk = Hunk(line, "")
+                hunk_lines = [line]
+        
+        # Hunk content
+        elif current_hunk:
+            hunk_lines.append(line)
+    
+    # Add the last hunk and file
+    if current_file and current_hunk:
+        current_hunk.content = '\n'.join(hunk_lines)
+        current_file.hunks.append(current_hunk)
+        files.append(current_file)
+    
+    return files
+
+class PRInfo:
     """
     Data class to store pull request details.
     
     Attributes:
-        owner: The GitHub repository owner (username or organization)
-        repo: The GitHub repository name
-        pull_number: The pull request number
-        title: The pull request title
-        description: The pull request description (body)
+        repo_owner: The GitHub repository owner (username or organization)
+        repo_name: The GitHub repository name
+        pull_request_number: The pull request number
+        pull_request_title: The pull request title
+        pull_request_description: The pull request description (body)
     """
     def __init__(self, owner: str, repo: str, pull_number: int, title: str, description: str):
-        self.owner = owner
-        self.repo = repo
-        self.pull_number = pull_number
-        self.title = title
-        self.description = description
+        self.repo_owner = owner
+        self.repo_name = repo
+        self.pull_request_number = pull_number
+        self.pull_request_title = title
+        self.pull_request_description = description
 
 class FileInfo:
     """
@@ -48,43 +147,43 @@ def get_github_client():
         raise ValueError("GITHUB_TOKEN environment variable is required")
     return Github(github_token)
 
-def get_pr_details() -> PRDetails:
+def s() -> PRInfo:
     """
     Extract pull request details from GitHub Actions event payload.
     
     This function handles both direct PR events and comment events on PRs.
     
     Returns:
-        PRDetails object containing pull request information
+        PRInfo object containing pull request information
         
     Raises:
         KeyError: If required fields are missing from the event payload
     """
     # Get the GitHub event data from the environment
     with open(os.environ["GITHUB_EVENT_PATH"], "r") as f:
-        event_data = json.load(f)
+        github_event_path = json.load(f)
 
     # Handle different event types
-    if "issue" in event_data and "pull_request" in event_data["issue"]:
+    if "issue" in github_event_path and "pull_request" in github_event_path["issue"]:
         # For comment triggers, get PR number from the issue
-        pull_number = event_data["issue"]["number"]
-        repo_full_name = event_data["repository"]["full_name"]
+        pull_number = github_event_path["issue"]["number"]
+        repo_full_name = github_event_path["repository"]["full_name"]
     else:
         # For direct PR events
-        pull_number = event_data["number"]
-        repo_full_name = event_data["repository"]["full_name"]
+        pull_number = github_event_path["number"]
+        repo_full_name = github_event_path["repository"]["full_name"]
 
     # Split repository full name into owner and repo name
     owner, repo = repo_full_name.split("/")
 
     # Get additional PR details from GitHub API
-    gh = get_github_client()
-    repo_obj = gh.get_repo(repo_full_name)
+    github_client = get_github_client()
+    repo_obj = github_client.get_repo(repo_full_name)
     pr = repo_obj.get_pull(pull_number)
 
-    return PRDetails(owner, repo_obj.name, pull_number, pr.title, pr.body)
+    return PRInfo(owner, repo_obj.name, pull_number, pr.title, pr.body)
 
-def get_diff(owner: str, repo: str, pull_number: int) -> str:
+def fetch_diff_for_pr(owner: str, repo: str, pull_number: int) -> str:
     """
     Fetch the diff of the pull request from GitHub API.
     
@@ -122,7 +221,7 @@ def get_diff(owner: str, repo: str, pull_number: int) -> str:
         print(f"Response: {response.text}")
         return ""
 
-def create_review_comment(
+def make_comment_for_review(
     owner: str,
     repo: str,
     pull_number: int,
@@ -140,13 +239,13 @@ def create_review_comment(
     print(f"Posting {len(comments)} review comments to GitHub")
 
     # Get GitHub client and repository
-    gh = get_github_client()
-    repo_obj = gh.get_repo(f"{owner}/{repo}")
+    github_client = get_github_client()
+    repo_obj = github_client.get_repo(f"{owner}/{repo}")
     pr = repo_obj.get_pull(pull_number)
     
     try:
         # Create the review with comments
-        review = pr.create_review(
+        review = pr.make_comment_for_review(
             body="AI Code Reviewer Comments",
             comments=comments,
             event="COMMENT"  # Post as regular comments, not approvals or rejections
@@ -157,7 +256,7 @@ def create_review_comment(
         print(f"Error posting review to GitHub: {str(e)}")
         print(f"Comment payload: {json.dumps(comments, indent=2)}")
 
-def create_prompt(file: PatchedFile, hunk: Hunk, pr_details: PRDetails) -> str:
+def generate_review_prompt(file: PatchedFile, hunk: Hunk, pr_details: PRInfo) -> str:
     """
     Create the AI prompt for reviewing a code chunk.
     
@@ -178,11 +277,11 @@ def create_prompt(file: PatchedFile, hunk: Hunk, pr_details: PRDetails) -> str:
 
 Review the following code diff in the file "{file.path}" and take the pull request title and description into account when writing the response.
 
-Pull request title: {pr_details.title}
+Pull request title: {pr_details.pull_request_title}
 Pull request description:
 
 ---
-{pr_details.description or 'No description provided'}
+{pr_details.pull_request_description or 'No description provided'}
 ---
 
 Git diff to review:
@@ -192,7 +291,7 @@ Git diff to review:
 ```
 """
 
-def create_comment(file: FileInfo, hunk: Hunk, ai_responses: List[Dict[str, str]]) -> List[Dict[str, Any]]:
+def create_github_comment(file: FileInfo, hunk: Hunk, model_response: List[Dict[str, str]]) -> List[Dict[str, Any]]:
     """
     Convert AI responses into GitHub comment objects.
     
@@ -204,30 +303,46 @@ def create_comment(file: FileInfo, hunk: Hunk, ai_responses: List[Dict[str, str]
     Returns:
         List of comment objects ready to be posted to GitHub
     """
-    print(f"Processing {len(ai_responses)} AI review suggestions")
+    print(f"Processing {len(model_response)} AI review suggestions")
     
-    comments = []
-    for ai_response in ai_responses:
+    created_github_comments = []
+    for model_response in model_response:
         try:
             # Extract line number from AI response
-            line_number = int(ai_response["lineNumber"])
+            model_response_line_number = int(model_response["lineNumber"])
             
             # Validate line number is within the hunk's range
-            if line_number < 1 or line_number > hunk.source_length:
-                print(f"Warning: Line number {line_number} is outside the valid range")
+            if model_response_line_number < 1 or model_response_line_number > hunk.source_length:
+                print(f"Warning: Line number {model_response_line_number} is outside the valid range")
                 continue
 
             # Create comment object in GitHub-compatible format
             comment = {
-                "body": ai_response["reviewComment"],
+                "body": model_response["reviewComment"],
                 "path": file.path,
-                "position": line_number
+                "position": model_response_line_number
             }
-            comments.append(comment)
-            print(f"Created comment for line {line_number}")
+            created_github_comments.append(comment)
+            print(f"Created comment for line {model_response_line_number}")
 
         except (KeyError, TypeError, ValueError) as e:
             print(f"Error creating comment: {e}")
-            print(f"Problematic AI response: {ai_response}")
+            print(f"Problematic AI response: {model_response}")
     
-    return comments 
+    return created_github_comments
+
+def get_diff_and_files(owner: str, repo: str, pull_number: int) -> tuple[str, List[PatchedFile]]:
+    """
+    Fetch the diff of the pull request and parse it into file objects.
+    
+    Args:
+        owner: Repository owner (username or organization)
+        repo: Repository name
+        pull_number: Pull request number
+        
+    Returns:
+        Tuple of (raw diff string, list of parsed PatchedFile objects)
+    """
+    diff_text = fetch_diff_for_pr(owner, repo, pull_number)
+    files = parse_git_diff(diff_text)
+    return diff_text, files 

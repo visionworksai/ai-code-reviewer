@@ -1,15 +1,15 @@
 import json
 import os
 from typing import List, Dict, Any
-from unidiff import Hunk
 
 # Import from our custom modules
 from models import get_ai_model
 from github_utils import (
-    get_pr_details, get_diff, create_review_comment, 
-    create_prompt, create_comment, FileInfo
+    information_for_pr_review, fetch_diff_for_pr, make_comment_for_review, 
+    generate_review_prompt, create_github_comment, Hunk
 )
-from diff_utils import parse_diff, filter_diff_by_patterns
+from github_utils import FileInfo as CodeFileMetadata
+from diff_utils import parse_git_diff, filter_diff_by_patterns
 
 def analyze_code(parsed_diff: List[Dict[str, Any]], pr_details, model_type: str = "gemini") -> List[Dict[str, Any]]:
     """
@@ -25,7 +25,7 @@ def analyze_code(parsed_diff: List[Dict[str, Any]], pr_details, model_type: str 
     """
     print("Starting code analysis...")
     print(f"Number of files to analyze: {len(parsed_diff)}")
-    comments = []
+    comments_for_review = []
 
     # Initialize the appropriate AI model based on configuration
     ai_model = get_ai_model(model_type)
@@ -33,45 +33,37 @@ def analyze_code(parsed_diff: List[Dict[str, Any]], pr_details, model_type: str 
 
     # Process each file in the diff
     for file_data in parsed_diff:
-        file_path = file_data.get('path', '')
+        file_path = file_data.path
         print(f"\nAnalyzing file: {file_path}")
 
         # Skip deleted files or invalid paths
         if not file_path or file_path == "/dev/null":
             continue
 
-        file_info = FileInfo(file_path)
-        hunks = file_data.get('hunks', [])
+        # Rename file_info to file_metadata
+        file_metadata = CodeFileMetadata(file_path)
+        hunks = file_data.hunks
         print(f"Found {len(hunks)} code chunks to review")
 
         # Process each code chunk (hunk) in the file
-        for hunk_data in hunks:
-            hunk_lines = hunk_data.get('lines', [])
-            if not hunk_lines:
+        for hunk in hunks:
+            if not hunk.content:
                 continue
 
-            # Create a unidiff Hunk object for better processing
-            hunk = Hunk()
-            hunk.source_start = 1
-            hunk.source_length = len(hunk_lines)
-            hunk.target_start = 1
-            hunk.target_length = len(hunk_lines)
-            hunk.content = '\n'.join(hunk_lines)
-
             # Create prompt and get AI analysis
-            prompt = create_prompt(file_info, hunk, pr_details)
+            review_prompt = generate_review_prompt(file_metadata, hunk, pr_details)
             print("Sending code chunk to AI for review...")
-            ai_response = ai_model.get_ai_response(prompt)
+            response_from_model = ai_model.get_response_from_model(review_prompt)
 
             # Process AI responses into GitHub comments
-            if ai_response:
-                new_comments = create_comment(file_info, hunk, ai_response)
-                if new_comments:
-                    comments.extend(new_comments)
-                    print(f"Added {len(new_comments)} review comment(s)")
+            if response_from_model:
+                created_comments = create_github_comment(file_metadata, hunk, response_from_model)
+                if created_comments:
+                    comments_for_review.extend(created_comments)
+                    print(f"Added {len(created_comments)} review comment(s)")
 
-    print(f"Analysis complete. Generated {len(comments)} total comments")
-    return comments
+    print(f"Analysis complete. Generated {len(comments_for_review)} total comments")
+    return comments_for_review  
 
 def main():
     """
@@ -81,50 +73,49 @@ def main():
     patterns, analyzes code changes, and posts review comments to GitHub.
     """
     # Get pull request details from GitHub event
-    pr_details = get_pr_details()
+    pr_review_info = information_for_pr_review()
     
     # Load GitHub event data
-    event_data = json.load(open(os.environ["GITHUB_EVENT_PATH"], "r"))
-    event_name = os.environ.get("GITHUB_EVENT_NAME")
+    github_event_path = json.load(open(os.environ["GITHUB_EVENT_PATH"], "r"))
+    github_event_name = os.environ.get("GITHUB_EVENT_NAME")
     
     # Currently only supports issue_comment event (comment on PR)
-    if event_name == "issue_comment":
+    if github_event_name == "issue_comment":
         # Verify it's a comment on a pull request
-        if not event_data.get("issue", {}).get("pull_request"):
+        if not github_event_path.get("issue", {}).get("pull_request"):
             print("Comment was not on a pull request. Exiting.")
             return
 
         # Get the diff for the pull request
-        diff = get_diff(pr_details.owner, pr_details.repo, pr_details.pull_number)
-        if not diff:
+        fetched_diff = fetch_diff_for_pr(pr_review_info.repo_owner, pr_review_info.repo_name, pr_review_info.pull_request_number)
+        if not fetched_diff:
             print("No diff found for this pull request. Exiting.")
             return
 
         # Parse and filter the diff
-        parsed_diff = parse_diff(diff)
+        parsed_diff = parse_git_diff(fetched_diff)
         
         # Get exclusion patterns from environment variables
-        exclude_patterns = os.environ.get("INPUT_EXCLUDE", "").split(",")
-        exclude_patterns = [pattern.strip() for pattern in exclude_patterns]
-        filtered_diff = filter_diff_by_patterns(parsed_diff, exclude_patterns)
+        filter_patterns = os.environ.get("INPUT_EXCLUDE", "").split(",")
+        filtered_diff = filter_diff_by_patterns(parsed_diff, filter_patterns)
 
         # Get AI model type from environment (default to gemini)
         model_type = os.environ.get("AI_MODEL_TYPE", "gemini")
         
         # Analyze code and generate review comments
-        comments = analyze_code(filtered_diff, pr_details, model_type)
+        comments_for_review = analyze_code(filtered_diff, pr_review_info, model_type)
         
         # Post comments to GitHub if any were generated
-        if comments:
+        if comments_for_review:
             try:
-                create_review_comment(
-                    pr_details.owner, pr_details.repo, pr_details.pull_number, comments
+                make_comment_for_review(
+                    pr_review_info.repo_owner, pr_review_info.repo_name, pr_review_info.pull_request_number, comments_for_review
                 )
-                print(f"Successfully posted {len(comments)} review comments")
+                print(f"Successfully posted {len(comments_for_review)} review comments")
             except Exception as e:
                 print(f"Error posting review comments: {e}")
     else:
-        print(f"Unsupported GitHub event: {event_name}")
+        print(f"Unsupported GitHub event: {github_event_name}")
         return
 
 if __name__ == "__main__":

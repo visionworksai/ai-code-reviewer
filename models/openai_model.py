@@ -31,7 +31,7 @@ class OpenAIModel(BaseAIModel):
         if org_id:
             openai.organization = org_id
     
-    def get_ai_response(self, prompt: str) -> List[Dict[str, str]]:
+    def get_response_from_model(self, prompt: str) -> List[Dict[str, str]]:
         """
         Send prompt to OpenAI API and parse the structured response.
         
