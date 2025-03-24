@@ -194,3 +194,4 @@ diff_utils.py                    # Diff parsing + filtering
 - [x] Support Claude 3
 - [x] Support DeepSeek 🚀
 - [ ] Support local or self-hosted models
+- [ ] Optional Slack/Discord integration
