@@ -299,7 +299,7 @@ def create_github_comment(file: FileInfo, hunk: Hunk, model_response: List[Dict[
     Args:
         file: File information
         hunk: Code chunk that was reviewed
-        ai_responses: List of AI review responses
+        model_response: List of AI review responses
         
     Returns:
         List of comment objects ready to be posted to GitHub
@@ -307,10 +307,10 @@ def create_github_comment(file: FileInfo, hunk: Hunk, model_response: List[Dict[
     print(f"Processing {len(model_response)} AI review suggestions")
     
     created_github_comments = []
-    for model_response in model_response:
+    for review in model_response:
         try:
             # Extract line number from AI response
-            model_response_line_number = int(model_response["lineNumber"])
+            model_response_line_number = int(review["lineNumber"])
             
             # Validate line number is within the hunk's range
             if model_response_line_number < 1 or model_response_line_number > hunk.source_length:
@@ -319,7 +319,7 @@ def create_github_comment(file: FileInfo, hunk: Hunk, model_response: List[Dict[
 
             # Create comment object in GitHub-compatible format
             comment = {
-                "body": model_response["reviewComment"],
+                "body": review["reviewComment"],
                 "path": file.path,
                 "position": model_response_line_number
             }
@@ -328,7 +328,7 @@ def create_github_comment(file: FileInfo, hunk: Hunk, model_response: List[Dict[
 
         except (KeyError, TypeError, ValueError) as e:
             print(f"Error creating comment: {e}")
-            print(f"Problematic AI response: {model_response}")
+            print(f"Problematic AI response: {review}")
     
     return created_github_comments
 
