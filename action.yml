@@ -1,55 +1,23 @@
 name: AI Code Reviewer
-description: "PR changes are reviewed by Gemini / OpenAI / Claude"
+description: "PR changes are reviewed by Gemini / openai / Claude"
 author: "visionworksai"
 
 inputs:
-  LLAMA_MODEL_PATH:
-    description: "Path to the local GGUF model file"
-    required: false
-  LLAMA_CONTEXT_SIZE:
-    description: "Context size for llama.cpp"
-    required: false
-    default: "4096"
-  LLAMA_GPU_LAYERS:
-    description: "Number of GPU layers for llama.cpp"
-    required: false
-    default: "-1"
-  LLAMA_SEED:
-    description: "Random seed for llama.cpp"
-    required: false
-    default: "42"
-  LLAMA_THREADS:
-    description: "Number of CPU threads to use"
-    required: false
-    default: "4"
-  LLAMA_TEMPERATURE:
-    description: "Temperature for model generation"
-    required: false
-    default: "0.1"
-  LLAMA_TOP_P:
-    description: "Top-p sampling value"
-    required: false
-    default: "0.95"
-  LLAMA_MAX_TOKENS:
-    description: "Max tokens for output"
-    required: false
-    default: "2048"
-  LLAMA_REPEAT_PENALTY:
-    description: "Repeat penalty value"
-    required: false
-    default: "1.1"
 
   GEMINI_API_KEY:
     description: "Google Gemini API key"
     required: false
+    default: "gemini-1.5-flash-001"
+
   GEMINI_MODEL:
     description: "Gemini model name"
     required: false
     default: "gemini-1.5-flash-001"
 
   OPENAI_API_KEY:
-    description: "OpenAI API key"
+    description: "OpenAI openai API key"
     required: false
+
   OPENAI_MODEL:
     description: "OpenAI model name"
     required: false
@@ -57,6 +25,7 @@ inputs:
   CLAUDE_API_KEY:
     description: "Anthropic Claude API key"
     required: false
+
   CLAUDE_MODEL:
     description: "Claude model name"
     required: false
@@ -77,29 +46,37 @@ runs:
           echo "AI_MODEL_TYPE=openai" >> $GITHUB_ENV
         elif [[ "$body" == *"/claude-review"* ]]; then
           echo "AI_MODEL_TYPE=claude" >> $GITHUB_ENV
-        elif [[ "$body" == *"/llama-review"* ]]; then
-          echo "AI_MODEL_TYPE=llama" >> $GITHUB_ENV
         else
           echo "AI_MODEL_TYPE=gemini" >> $GITHUB_ENV
         fi
       shell: bash
 
-    - name: Validate required API keys
+    - name: Fail if required secret is missing
       run: |
         if [[ "$AI_MODEL_TYPE" == "openai" && -z "${{ inputs.OPENAI_API_KEY }}" ]]; then
-          echo "❌ Missing OPENAI_API_KEY"
+          echo "❌ OPENAI_API_KEY is missing. Please add it to your repo secrets."
           exit 1
         elif [[ "$AI_MODEL_TYPE" == "claude" && -z "${{ inputs.CLAUDE_API_KEY }}" ]]; then
-          echo "❌ Missing CLAUDE_API_KEY"
+          echo "❌ CLAUDE_API_KEY is missing. Please add it to your repo secrets."
           exit 1
         elif [[ "$AI_MODEL_TYPE" == "gemini" && -z "${{ inputs.GEMINI_API_KEY }}" ]]; then
-          echo "❌ Missing GEMINI_API_KEY"
+          echo "❌ GEMINI_API_KEY is missing. Please add it to your repo secrets."
           exit 1
+        
         fi
       shell: bash
 
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.10"
+
+    - name: Install dependencies
+      run: pip install -r ${{ github.action_path }}/requirements.txt
+      shell: bash
+
     - name: Run AI Code Reviewer
-      run: python3 ${{ github.action_path }}/visionworks_code_reviewer.py
+      run: python ${{ github.action_path }}/visionworks_code_reviewer.py
       shell: bash
       env:
         GEMINI_API_KEY: ${{ inputs.GEMINI_API_KEY }}
@@ -108,15 +85,6 @@ runs:
         OPENAI_MODEL: ${{ inputs.OPENAI_MODEL }}
         CLAUDE_API_KEY: ${{ inputs.CLAUDE_API_KEY }}
         CLAUDE_MODEL: ${{ inputs.CLAUDE_MODEL }}
-        LLAMA_MODEL_PATH: ${{ inputs.LLAMA_MODEL_PATH }}
-        LLAMA_CONTEXT_SIZE: ${{ inputs.LLAMA_CONTEXT_SIZE }}
-        LLAMA_GPU_LAYERS: ${{ inputs.LLAMA_GPU_LAYERS }}
-        LLAMA_SEED: ${{ inputs.LLAMA_SEED }}
-        LLAMA_THREADS: ${{ inputs.LLAMA_THREADS }}
-        LLAMA_TEMPERATURE: ${{ inputs.LLAMA_TEMPERATURE }}
-        LLAMA_TOP_P: ${{ inputs.LLAMA_TOP_P }}
-        LLAMA_MAX_TOKENS: ${{ inputs.LLAMA_MAX_TOKENS }}
-        LLAMA_REPEAT_PENALTY: ${{ inputs.LLAMA_REPEAT_PENALTY }}
         INPUT_EXCLUDE: ${{ inputs.INPUT_EXCLUDE }}
         AI_MODEL_TYPE: ${{ env.AI_MODEL_TYPE }}
         GITHUB_TOKEN: ${{ github.token }}
