@@ -49,7 +49,8 @@ def analyze_code(parsed_diff: List[Dict[str, Any]], pr_details, model_type: str 
 
         # Process each code chunk (hunk) in the file
         for hunk in hunks:
-            if not hunk.content:
+            # if not hunk.content:
+            if not hunk.get("lines"):
                 continue
 
             # Create prompt and get AI analysis
