@@ -33,7 +33,6 @@ def analyze_code(parsed_diff: List[Dict[str, Any]], pr_details, model_type: str 
 
     # Process each file in the diff
     for file_data in parsed_diff:
-        # file_path = file_data.path
         file_path = file_data["path"]
         print(f"\nAnalyzing file: {file_path}")
 
@@ -41,18 +40,28 @@ def analyze_code(parsed_diff: List[Dict[str, Any]], pr_details, model_type: str 
         if not file_path or file_path == "/dev/null":
             continue
 
-        # Rename file_info to file_metadata
+        # Create file metadata object
         file_metadata = CodeFileMetadata(file_path)
-        # hunks = file_data.hunks
         hunks = file_data["hunks"]
         print(f"Found {len(hunks)} code chunks to review")
 
         # Process each code chunk (hunk) in the file
-        for hunk in hunks:
-            # if not hunk.content:
-            if not hunk.get("lines"):
+        for hunk_dict in hunks:
+            # Convert dictionary hunk to Hunk object
+            hunk_content = ""
+            if "lines" in hunk_dict:
+                # For diff_utils format
+                hunk_content = "\n".join([line.get("content", "") for line in hunk_dict.get("lines", [])])
+            elif "content" in hunk_dict:
+                # For direct content
+                hunk_content = hunk_dict["content"]
+            
+            if not hunk_content:
                 continue
-
+                
+            # Create a Hunk object from the dictionary
+            hunk = Hunk(hunk_dict.get("header", ""), hunk_content)
+            
             # Create prompt and get AI analysis
             review_prompt = generate_review_prompt(file_metadata, hunk, pr_details)
             print("Sending code chunk to AI for review...")
