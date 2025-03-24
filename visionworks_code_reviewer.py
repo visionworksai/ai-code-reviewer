@@ -33,7 +33,8 @@ def analyze_code(parsed_diff: List[Dict[str, Any]], pr_details, model_type: str 
 
     # Process each file in the diff
     for file_data in parsed_diff:
-        file_path = file_data.path
+        # file_path = file_data.path
+        file_path = file_data["path"]
         print(f"\nAnalyzing file: {file_path}")
 
         # Skip deleted files or invalid paths
@@ -42,7 +43,8 @@ def analyze_code(parsed_diff: List[Dict[str, Any]], pr_details, model_type: str 
 
         # Rename file_info to file_metadata
         file_metadata = CodeFileMetadata(file_path)
-        hunks = file_data.hunks
+        # hunks = file_data.hunks
+        hunks = file_data["hunks"]
         print(f"Found {len(hunks)} code chunks to review")
 
         # Process each code chunk (hunk) in the file
