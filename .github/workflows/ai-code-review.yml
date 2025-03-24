@@ -11,7 +11,8 @@ jobs:
     if: github.event.issue.pull_request && (
           contains(github.event.comment.body, '/gemini-review') ||
           contains(github.event.comment.body, '/openai-review') ||
-          contains(github.event.comment.body, '/claude-review')
+          contains(github.event.comment.body, '/claude-review') ||
+          contains(github.event.comment.body, '/llama-review')
         )
 
 
@@ -38,6 +39,8 @@ jobs:
             echo "model_type=openai" >> $GITHUB_OUTPUT
           elif [[ "${{ github.event.comment.body }}" == *"/claude-review"* ]]; then
             echo "model_type=claude" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.event.comment.body }}" == *"/llama-review"* ]]; then
+            echo "model_type=llama" >> $GITHUB_OUTPUT
           else
             echo "model_type=gemini" >> $GITHUB_OUTPUT
           fi
@@ -45,6 +48,15 @@ jobs:
       - name: Run AI Code Review
         env:
           GITHUB_TOKEN: ${{ github.token }}
+          LLAMA_MODEL_PATH: ${{ secrets.LLAMA_MODEL_PATH }}
+          LLAMA_CONTEXT_SIZE: ${{ secrets.LLAMA_CONTEXT_SIZE }}
+          LLAMA_GPU_LAYERS: ${{ secrets.LLAMA_GPU_LAYERS }}
+          LLAMA_SEED: ${{ secrets.LLAMA_SEED }}
+          LLAMA_THREADS: ${{ secrets.LLAMA_THREADS }}
+          LLAMA_TEMPERATURE: ${{ secrets.LLAMA_TEMPERATURE }}
+          LLAMA_TOP_P: ${{ secrets.LLAMA_TOP_P }}
+          LLAMA_MAX_TOKENS: ${{ secrets.LLAMA_MAX_TOKENS }}
+          LLAMA_REPEAT_PENALTY: ${{ secrets.LLAMA_REPEAT_PENALTY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}

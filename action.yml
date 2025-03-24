@@ -3,6 +3,51 @@ description: "PR changes are reviewed by Gemini / openai / Claude"
 author: "visionworksai"
 
 inputs:
+
+  LLAMA_MODEL_PATH:
+    description: "Path to the local GGUF model file"
+    required: false
+
+  LLAMA_CONTEXT_SIZE:
+    description: "Context size for llama.cpp"
+    required: false
+    default: "4096"
+
+  LLAMA_GPU_LAYERS:
+    description: "Number of GPU layers for llama.cpp"
+    required: false
+    default: "-1"
+
+  LLAMA_SEED:
+    description: "Random seed for llama.cpp"
+    required: false
+    default: "42"
+
+  LLAMA_THREADS:
+    description: "Number of CPU threads to use"
+    required: false
+    default: "4"
+
+  LLAMA_TEMPERATURE:
+    description: "Temperature for model generation"
+    required: false
+    default: "0.1"
+
+  LLAMA_TOP_P:
+    description: "Top-p sampling value"
+    required: false
+    default: "0.95"
+
+  LLAMA_MAX_TOKENS:
+    description: "Max tokens for output"
+    required: false
+    default: "2048"
+
+  LLAMA_REPEAT_PENALTY:
+    description: "Repeat penalty value"
+    required: false
+    default: "1.1"
+
   GEMINI_API_KEY:
     description: "Google Gemini API key"
     required: false
@@ -45,6 +90,8 @@ runs:
           echo "AI_MODEL_TYPE=openai" >> $GITHUB_ENV
         elif [[ "$body" == *"/claude-review"* ]]; then
           echo "AI_MODEL_TYPE=claude" >> $GITHUB_ENV
+        elif [[ "$body" == *"/llama-review"* ]]; then
+          echo "AI_MODEL_TYPE=llama" >> $GITHUB_ENV
         else
           echo "AI_MODEL_TYPE=gemini" >> $GITHUB_ENV
         fi
@@ -61,6 +108,7 @@ runs:
         elif [[ "$AI_MODEL_TYPE" == "gemini" && -z "${{ inputs.GEMINI_API_KEY }}" ]]; then
           echo "❌ GEMINI_API_KEY is missing. Please add it to your repo secrets."
           exit 1
+        
         fi
       shell: bash
 
@@ -83,8 +131,18 @@ runs:
         OPENAI_MODEL: ${{ inputs.OPENAI_MODEL }}
         CLAUDE_API_KEY: ${{ inputs.CLAUDE_API_KEY }}
         CLAUDE_MODEL: ${{ inputs.CLAUDE_MODEL }}
+        LLAMA_MODEL_PATH: ${{ inputs.LLAMA_MODEL_PATH }}
+        LLAMA_CONTEXT_SIZE: ${{ inputs.LLAMA_CONTEXT_SIZE }}
+        LLAMA_GPU_LAYERS: ${{ inputs.LLAMA_GPU_LAYERS }}
+        LLAMA_SEED: ${{ inputs.LLAMA_SEED }}
+        LLAMA_THREADS: ${{ inputs.LLAMA_THREADS }}
+        LLAMA_TEMPERATURE: ${{ inputs.LLAMA_TEMPERATURE }}
+        LLAMA_TOP_P: ${{ inputs.LLAMA_TOP_P }}
+        LLAMA_MAX_TOKENS: ${{ inputs.LLAMA_MAX_TOKENS }}
+        LLAMA_REPEAT_PENALTY: ${{ inputs.LLAMA_REPEAT_PENALTY }}
         INPUT_EXCLUDE: ${{ inputs.INPUT_EXCLUDE }}
         AI_MODEL_TYPE: ${{ env.AI_MODEL_TYPE }}
         GITHUB_TOKEN: ${{ github.token }}
         GITHUB_EVENT_PATH: ${{ github.event_path }}
         GITHUB_EVENT_NAME: ${{ github.event_name }}
+
