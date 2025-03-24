@@ -13,42 +13,39 @@ jobs:
       (
         contains(github.event.comment.body, '/gemini-review') ||
         contains(github.event.comment.body, '/openai-review') ||
-        contains(github.event.comment.body, '/claude-review') ||
-        contains(github.event.comment.body, '/deepseek-review')
+        contains(github.event.comment.body, '/claude-review')
       )
     runs-on: self-hosted
 
     steps:
-      - name: 📥 Checkout repository
+      - name: Checkout repository
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
-      - name: 🐍 Set up Python 3.10
+      - name: Set up Python 3.10
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
 
-      - name: 📦 Install requirements
+      - name: Install requirements
         run: pip install -r requirements.txt
 
-      - name: 🧠 Detect AI model
+      - name: Detect AI model
         id: model
         run: |
           case "${{ github.event.comment.body }}" in
-            *"/openai-review"*)  echo "model_type=openai" ;;
-            *"/claude-review"*)  echo "model_type=claude" ;;
-            *"/deepseek-review"*) echo "model_type=deepseek" ;;
-            *)                   echo "model_type=gemini" ;;
+            *"/openai-review"*) echo "model_type=openai" ;;
+            *"/claude-review"*) echo "model_type=claude" ;;
+            *) echo "model_type=gemini" ;;
           esac >> "$GITHUB_OUTPUT"
 
-      - name: 🤖 Run AI code review
+      - name: Run code review
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          GEMINI_API_KEY:  ${{ secrets.GEMINI_API_KEY }}
-          OPENAI_API_KEY:  ${{ secrets.OPENAI_API_KEY }}
-          CLAUDE_API_KEY:  ${{ secrets.CLAUDE_API_KEY }}
-          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
           GITHUB_EVENT_PATH: ${{ github.event_path }}
           GITHUB_EVENT_NAME: ${{ github.event_name }}
           AI_MODEL_TYPE: ${{ steps.model.outputs.model_type }}
