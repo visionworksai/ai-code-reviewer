@@ -29,29 +29,14 @@ jobs:
         with:
           python-version: "3.10"
 
-      - name: Install system packages and Python dependencies
+      - name: Install Python dependencies
         run: |
-          apt-get update
-          apt-get install -y \
-            build-essential \
-            cmake \
-            gcc-11 \
-            g++-11 \
-            python3-dev \
-            python3-pip
-
-          echo "✅ gcc: $(which gcc)"
-          echo "✅ g++: $(which g++)"
-          echo "✅ cmake: $(which cmake)"
-
-          chmod +x install_script.sh
-          ./install_script.sh
-
           export CC=$(which gcc)
           export CXX=$(which g++)
-
+          export CMAKE_ARGS="-DCMAKE_C_COMPILER=$CC -DCMAKE_CXX_COMPILER=$CXX"
           python3 -m pip install --upgrade pip setuptools wheel scikit-build-core
           python3 -m pip install --verbose --force-reinstall --no-cache-dir -r requirements.txt
+        shell: bash
 
       - name: Set AI Model Type
         id: detect_model

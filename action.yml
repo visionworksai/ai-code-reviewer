@@ -115,12 +115,6 @@ runs:
       with:
         python-version: "3.10"
 
-    - name: Run install_script.sh
-      run: |
-        chmod +x ${{ github.action_path }}/install_script.sh
-        ${{ github.action_path }}/install_script.sh
-      shell: bash
-
     - name: Install Python dependencies
       run: |
         export CC=$(which gcc)
