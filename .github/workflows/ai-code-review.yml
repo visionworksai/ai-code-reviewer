@@ -18,29 +18,30 @@ jobs:
     runs-on: self-hosted
 
     steps:
-      - name: Checkout repository
+      - name: 📥 Checkout repository
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
-      - name: Set up Python 3.10
+      - name: 🐍 Set up Python 3.10
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
 
-      - name: Install requirements
+      - name: 📦 Install Python requirements
         run: pip install -r requirements.txt
 
-      - name: Detect AI model
+      - name: 🔍 Detect AI model
         id: model
         run: |
           case "${{ github.event.comment.body }}" in
-            *"/openai-review"*) echo "model_type=openai" ;;
-            *"/claude-review"*) echo "model_type=claude" ;;
-            *) echo "model_type=gemini" ;;
-          esac >> "$GITHUB_OUTPUT"
+            *"/openai-review"*) echo "model_type=openai" >> $GITHUB_OUTPUT ;;
+            *"/claude-review"*) echo "model_type=claude" >> $GITHUB_OUTPUT ;;
+            *"/gemini-review"*) echo "model_type=gemini" >> $GITHUB_OUTPUT ;;
+            *) echo "❌ Unknown model type. Exiting." && exit 1 ;;
+          esac
 
-      - name: Run code review
+      - name: 🤖 Run AI Code Reviewer
         env:
           GITHUB_TOKEN: ${{ github.token }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
@@ -49,5 +50,5 @@ jobs:
           GITHUB_EVENT_PATH: ${{ github.event_path }}
           GITHUB_EVENT_NAME: ${{ github.event_name }}
           AI_MODEL_TYPE: ${{ steps.model.outputs.model_type }}
-          INPUT_EXCLUDE: "*.md, docs/**, *.json"
+          INPUT_EXCLUDE: "*.md,docs/**,*.json"
         run: python visionworks_code_reviewer.py
