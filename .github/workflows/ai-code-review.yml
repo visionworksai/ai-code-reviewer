@@ -15,7 +15,6 @@ jobs:
           contains(github.event.comment.body, '/llama-review')
         )
 
-
     runs-on: self-hosted
 
     steps:
@@ -28,8 +27,8 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
-      
-      - name: Install llama-cpp-python and other deps with compiler vars
+
+      - name: Install system packages and Python deps
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -44,9 +43,11 @@ jobs:
           echo "✅ g++: $(which g++)"
           echo "✅ cmake: $(which cmake)"
 
-          CC=$(which gcc) CXX=$(which g++) pip install --verbose -r requirements.txt
+          # Pre-install llama-cpp-python with compiler environment
+          CC=$(which gcc) CXX=$(which g++) pip install llama-cpp-python
 
-
+          # Then install other Python deps
+          pip install -r requirements.txt
 
       - name: Set AI Model Type
         id: detect_model
