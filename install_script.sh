@@ -9,8 +9,8 @@ echo -e "${GREEN}Starting llama-cpp-python CPU installation fix...${NC}"
 
 # Install required build tools with specific gcc versions
 echo -e "${GREEN}Installing build essentials and CMake...${NC}"
-sudo apt-get update
-sudo apt-get install -y \
+apt-get update
+apt-get install -y \
     build-essential \
     cmake \
     gcc-11 \
@@ -20,8 +20,8 @@ sudo apt-get install -y \
     ninja-build
 
 # Set gcc-11 as the default compiler
-sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 100
-sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 100
+update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 100
+update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 100
 
 # Verify compiler installation explicitly
 echo -e "${GREEN}Verifying compiler installation...${NC}"
