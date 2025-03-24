@@ -1,69 +1,44 @@
 name: AI Code Reviewer
-description: "Reviews PR changes using Gemini / OpenAI / Claude"
+description: "Reviews PR changes using Gemini / OpenAI / Claude / DeepSeek"
 author: "visionworksai"
 
 inputs:
-  GEMINI_API_KEY:
-    description: "Google Gemini API key"
-    required: false
-  GEMINI_MODEL:
-    description: "Gemini model name"
-    required: false
-    default: "gemini-1.5-flash-001"
+  GEMINI_API_KEY: { description: "Google Gemini API key", required: false }
+  GEMINI_MODEL:   { description: "Gemini model name", required: false, default: "gemini-1.5-flash-001" }
 
-  OPENAI_API_KEY:
-    description: "OpenAI API key"
-    required: false
-  OPENAI_MODEL:
-    description: "OpenAI model name"
-    required: false
-    default: "openai-4"
+  OPENAI_API_KEY: { description: "OpenAI API key", required: false }
+  OPENAI_MODEL:   { description: "OpenAI model name", required: false, default: "openai-4" }
 
-  CLAUDE_API_KEY:
-    description: "Anthropic Claude API key"
-    required: false
-  CLAUDE_MODEL:
-    description: "Claude model name"
-    required: false
-    default: "claude-3-sonnet-20240229"
+  CLAUDE_API_KEY: { description: "Claude API key", required: false }
+  CLAUDE_MODEL:   { description: "Claude model name", required: false, default: "claude-3-sonnet-20240229" }
 
-  INPUT_EXCLUDE:
-    description: "Comma-separated list of excluded file patterns"
-    required: false
-    default: ""
+  DEEPSEEK_API_KEY: { description: "DeepSeek API key", required: false }
+  DEEPSEEK_MODEL:   { description: "DeepSeek model name", required: false, default: "deepseek-coder" }
+
+  INPUT_EXCLUDE: { description: "Comma-separated list of excluded file patterns", required: false, default: "" }
 
 runs:
   using: "composite"
   steps:
-    - name: 🔍 Detect AI Model Type
+    - name: 🔍 Detect AI Model
       id: detect_model
       shell: bash
       run: |
         body=$(jq -r .comment.body "$GITHUB_EVENT_PATH")
-        if [[ "$body" == *"/openai-review"* ]]; then
-          echo "AI_MODEL_TYPE=openai" >> $GITHUB_ENV
-        elif [[ "$body" == *"/claude-review"* ]]; then
-          echo "AI_MODEL_TYPE=claude" >> $GITHUB_ENV
-        else
-          echo "AI_MODEL_TYPE=gemini" >> $GITHUB_ENV
-        fi
+        for model in openai claude deepseek; do
+          if [[ "$body" == *"/$model-review"* ]]; then
+            echo "AI_MODEL_TYPE=$model" >> $GITHUB_ENV && exit 0
+          fi
+        done
+        echo "AI_MODEL_TYPE=gemini" >> $GITHUB_ENV
 
-    - name: 🔒 Validate Required API Key
+    - name: 🔒 Validate API Key
       shell: bash
       run: |
-        case "$AI_MODEL_TYPE" in
-          openai)
-            [[ -z "${{ inputs.OPENAI_API_KEY }}" ]] && echo "❌ OPENAI_API_KEY is missing." && exit 1
-            ;;
-          claude)
-            [[ -z "${{ inputs.CLAUDE_API_KEY }}" ]] && echo "❌ CLAUDE_API_KEY is missing." && exit 1
-            ;;
-          gemini)
-            [[ -z "${{ inputs.GEMINI_API_KEY }}" ]] && echo "❌ GEMINI_API_KEY is missing." && exit 1
-            ;;
-        esac
+        key_var=$(echo "${AI_MODEL_TYPE^^}_API_KEY")
+        [[ -z "${!key_var}" ]] && echo "❌ ${key_var} is missing." && exit 1
 
-    - name: 🐍 Set up Python
+    - name: 🐍 Setup Python
       uses: actions/setup-python@v4
       with:
         python-version: "3.10"
@@ -72,18 +47,20 @@ runs:
       shell: bash
       run: pip install -r "${{ github.action_path }}/requirements.txt"
 
-    - name: 🤖 Run AI Code Reviewer
+    - name: 🤖 Run Reviewer
       shell: bash
       run: python "${{ github.action_path }}/visionworks_code_reviewer.py"
       env:
-        GEMINI_API_KEY:  ${{ inputs.GEMINI_API_KEY }}
-        GEMINI_MODEL:    ${{ inputs.GEMINI_MODEL }}
-        OPENAI_API_KEY:  ${{ inputs.OPENAI_API_KEY }}
-        OPENAI_MODEL:    ${{ inputs.OPENAI_MODEL }}
-        CLAUDE_API_KEY:  ${{ inputs.CLAUDE_API_KEY }}
-        CLAUDE_MODEL:    ${{ inputs.CLAUDE_MODEL }}
-        INPUT_EXCLUDE:   ${{ inputs.INPUT_EXCLUDE }}
-        AI_MODEL_TYPE:   ${{ env.AI_MODEL_TYPE }}
-        GITHUB_TOKEN:    ${{ github.token }}
+        GEMINI_API_KEY:    ${{ inputs.GEMINI_API_KEY }}
+        GEMINI_MODEL:      ${{ inputs.GEMINI_MODEL }}
+        OPENAI_API_KEY:    ${{ inputs.OPENAI_API_KEY }}
+        OPENAI_MODEL:      ${{ inputs.OPENAI_MODEL }}
+        CLAUDE_API_KEY:    ${{ inputs.CLAUDE_API_KEY }}
+        CLAUDE_MODEL:      ${{ inputs.CLAUDE_MODEL }}
+        DEEPSEEK_API_KEY:  ${{ inputs.DEEPSEEK_API_KEY }}
+        DEEPSEEK_MODEL:    ${{ inputs.DEEPSEEK_MODEL }}
+        INPUT_EXCLUDE:     ${{ inputs.INPUT_EXCLUDE }}
+        AI_MODEL_TYPE:     ${{ env.AI_MODEL_TYPE }}
+        GITHUB_TOKEN:      ${{ github.token }}
         GITHUB_EVENT_PATH: ${{ github.event_path }}
         GITHUB_EVENT_NAME: ${{ github.event_name }}
