@@ -44,17 +44,35 @@ permissions: write-all
 jobs:
   ai-review:
     runs-on: self-hosted  # or ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
 
-      - name: Run AI Reviewer
-        uses: visionworksai/ai-code-reviewer@main
+    steps:
+      ### Stage 1: Checkout Repository
+      - name: 📥 Checkout PR code
+        uses: actions/checkout@v4
+
+      ### Stage 2: Run AI Reviewer
+      - name: 🤖 AI Code Reviewer
+        uses: visionworksai/ai-code-reviewer@v1.0.0
         with:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
-          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
-          INPUT_EXCLUDE: "*.md, docs/**"
+          # Google Gemini
+          GEMINI_API_KEY:    ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL:      gemini-1.5-flash-001
+
+          # OpenAI GPT
+          OPENAI_API_KEY:    ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_MODEL:      gpt-4
+
+          # Claude by Anthropic
+          CLAUDE_API_KEY:    ${{ secrets.CLAUDE_API_KEY }}
+          CLAUDE_MODEL:      claude-3-haiku-20240307
+
+          # DeepSeek
+          DEEPSEEK_API_KEY:  ${{ secrets.DEEPSEEK_API_KEY }}
+          DEEPSEEK_MODEL:    deepseek-reasoner
+
+          # Optional exclusions
+          INPUT_EXCLUDE:     "*.md, docs/**"
+
 ```
 
 2. Add **secrets** to your GitHub repo:
