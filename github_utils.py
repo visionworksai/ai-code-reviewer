@@ -246,7 +246,7 @@ def make_comment_for_review(
     
     try:
         # Create the review with comments
-        review = pr.make_comment_for_review(
+        review = pr.create_review(
             body="Comments from Code Reviewer",
             comments=comments,
             event="COMMENT"  # Post as regular comments, not approvals or rejections
