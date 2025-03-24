@@ -5,49 +5,53 @@ GREEN='\033[0;32m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 
-echo "Starting llama-cpp-python CPU installation fix..."
+echo -e "${GREEN}Starting llama-cpp-python CPU installation fix...${NC}"
 
 # Install required build tools
-echo "Installing build essentials and CMake..."
+echo -e "${GREEN}Installing build essentials and CMake...${NC}"
 sudo apt-get update
-sudo apt-get install -y build-essential cmake python3-dev
+sudo apt-get install -y build-essential cmake gcc g++ python3-dev python3-pip
 
-# Verify compiler installation
-echo "Verifying compiler installation..."
-if ! command -v gcc >/dev/null 2>&1 || ! command -v g++ >/dev/null 2>&1; then
+# Verify compiler installation explicitly
+echo -e "${GREEN}Verifying compiler installation...${NC}"
+GCC_PATH=$(which gcc)
+GPP_PATH=$(which g++)
+
+if [[ -z "$GCC_PATH" ]] || [[ -z "$GPP_PATH" ]]; then
     echo -e "${RED}Error: GCC or G++ not found. Installation failed.${NC}"
     exit 1
+else
+    echo -e "${GREEN}gcc found at: $GCC_PATH${NC}"
+    echo -e "${GREEN}g++ found at: $GPP_PATH${NC}"
 fi
 
-# Set compiler environment variables
-export CC=gcc
-export CXX=g++
+# Export compiler paths explicitly
+export CC="$GCC_PATH"
+export CXX="$GPP_PATH"
 
-# Install llama-cpp-python with CPU support
-echo "Installing llama-cpp-python with CPU support..."
-python3 -m pip install --upgrade pip
-python3 -m pip install --upgrade setuptools wheel
+# Upgrade Python package management tools
+python3 -m pip install --upgrade pip setuptools wheel
 
-# Try the pre-built wheel first (faster and usually works)
-echo "Attempting to install pre-built wheel..."
+# Attempt installation with pre-built wheel first
+echo -e "${GREEN}Attempting to install pre-built llama-cpp-python wheel...${NC}"
 if python3 -m pip install llama-cpp-python --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu; then
     echo -e "${GREEN}Successfully installed llama-cpp-python using pre-built wheel!${NC}"
 else
-    echo "Pre-built wheel installation failed, attempting to build from source..."
-    # If pre-built wheel fails, try building from source
+    echo -e "${RED}Pre-built wheel installation failed, attempting to build from source...${NC}"
+    # Install from source with verbose debugging
     if python3 -m pip install --verbose --force-reinstall --no-cache-dir llama-cpp-python; then
         echo -e "${GREEN}Successfully installed llama-cpp-python from source!${NC}"
     else
-        echo -e "${RED}Installation failed. Please check the error messages above.${NC}"
+        echo -e "${RED}Installation from source failed. Please check the logs above carefully.${NC}"
         exit 1
     fi
 fi
 
-# Verify installation
-echo "Verifying installation..."
-if python3 -c "import llama_cpp" 2>/dev/null; then
+# Verify installation explicitly
+echo -e "${GREEN}Verifying llama-cpp-python installation...${NC}"
+if python3 -c "import llama_cpp; print(llama_cpp.__version__)"; then
     echo -e "${GREEN}Installation verified successfully!${NC}"
 else
-    echo -e "${RED}Verification failed. The package is not properly installed.${NC}"
+    echo -e "${RED}Verification failed. llama-cpp-python is not properly installed.${NC}"
     exit 1
 fi

@@ -43,12 +43,13 @@ jobs:
           echo "✅ g++: $(which g++)"
           echo "✅ cmake: $(which cmake)"
 
-          # Add execute permission to the installation script
           chmod +x install_script.sh
-          # Run the installation script
           ./install_script.sh
 
-          CC=$(which gcc) CXX=$(which g++) pip install --verbose -r requirements.txt
+          export CC=$(which gcc)
+          export CXX=$(which g++)
+          pip install --verbose -r requirements.txt
+
 
       - name: Set AI Model Type
         id: detect_model
