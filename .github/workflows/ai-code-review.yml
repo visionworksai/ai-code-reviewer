@@ -8,11 +8,12 @@ permissions: write-all
 
 jobs:
   ai-code-review:
-    if: github.event.issue.pull_request && (
-      contains(github.event.comment.body, '/gemini-review') ||
-      contains(github.event.comment.body, '/openai-review') ||
-      contains(github.event.comment.body, '/claude-review') ||
-      contains(github.event.comment.body, '/llama-review')
+    if: |
+      github.event.issue.pull_request && (
+        contains(github.event.comment.body, '/gemini-review') ||
+        contains(github.event.comment.body, '/openai-review') ||
+        contains(github.event.comment.body, '/claude-review') ||
+        contains(github.event.comment.body, '/llama-review')
       )
 
     runs-on: self-hosted
@@ -28,7 +29,7 @@ jobs:
         with:
           python-version: "3.10"
 
-      - name: Install system packages and Python deps
+      - name: Install system packages and Python dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -48,8 +49,9 @@ jobs:
 
           export CC=$(which gcc)
           export CXX=$(which g++)
-          pip install --verbose -r requirements.txt
 
+          python3 -m pip install --upgrade pip setuptools wheel scikit-build-core
+          python3 -m pip install --verbose --force-reinstall --no-cache-dir -r requirements.txt
 
       - name: Set AI Model Type
         id: detect_model
