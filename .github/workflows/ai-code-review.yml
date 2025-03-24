@@ -35,6 +35,11 @@ jobs:
             python3-pip \
             ninja-build
 
+      - name: Set gcc-11 and g++-11 as default compilers
+        run: |
+          sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 100
+          sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 100
+
       - name: Run AI Code Reviewer Action
         uses: ./  # local action in the root directory
         with:
@@ -52,6 +57,6 @@ jobs:
           LLAMA_REPEAT_PENALTY: ${{ secrets.LLAMA_REPEAT_PENALTY }}
           INPUT_EXCLUDE: "*.md, docs/**, *.json"
         env:
-          CC: gcc-11
-          CXX: g++-11
-          CMAKE_ARGS: -DCMAKE_C_COMPILER=gcc-11 -DCMAKE_CXX_COMPILER=g++-11
+          CC: gcc
+          CXX: g++
+          CMAKE_ARGS: -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++
