@@ -1,5 +1,5 @@
 name: AI Code Reviewer
-description: "PR changes are reviewed by Gemini / OpenAI / Claude"
+description: "PR changes are reviewed by Gemini / openai / Claude"
 author: "visionworksai"
 
 inputs:
@@ -8,9 +8,15 @@ inputs:
     required: false
     default: "gemini-1.5-flash-001"
 
-  OPENAI_API_KEY:
-    description: "OpenAI API key"
+  GEMINI_MODEL:
+    description: "Gemini model name"
     required: false
+    default: "gemini-1.5-flash-001"
+
+  OPENAI_API_KEY:
+    description: "OpenAI openai API key"
+    required: false
+
   OPENAI_MODEL:
     description: "OpenAI model name"
     required: false
@@ -18,9 +24,15 @@ inputs:
   CLAUDE_API_KEY:
     description: "Anthropic Claude API key"
     required: false
+
   CLAUDE_MODEL:
     description: "Claude model name"
     required: false
+
+  INPUT_EXCLUDE:
+    description: "Files or folders to exclude from AI review"
+    required: false
+    default: "*.md, docs/**, *.json"
 
 runs:
   using: "composite"
@@ -51,3 +63,28 @@ runs:
           exit 1
         fi
       shell: bash
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.10"
+
+    - name: Install dependencies
+      run: pip install -r ${{ github.action_path }}/requirements.txt
+      shell: bash
+
+    - name: Run AI Code Reviewer
+      run: python ${{ github.action_path }}/visionworks_code_reviewer.py
+      shell: bash
+      env:
+        GEMINI_API_KEY: ${{ inputs.GEMINI_API_KEY }}
+        GEMINI_MODEL: ${{ inputs.GEMINI_MODEL }}
+        OPENAI_API_KEY: ${{ inputs.OPENAI_API_KEY }}
+        OPENAI_MODEL: ${{ inputs.OPENAI_MODEL }}
+        CLAUDE_API_KEY: ${{ inputs.CLAUDE_API_KEY }}
+        CLAUDE_MODEL: ${{ inputs.CLAUDE_MODEL }}
+        INPUT_EXCLUDE: ${{ inputs.INPUT_EXCLUDE }}
+        AI_MODEL_TYPE: ${{ env.AI_MODEL_TYPE }}
+        GITHUB_TOKEN: ${{ github.token }}
+        GITHUB_EVENT_PATH: ${{ github.event_path }}
+        GITHUB_EVENT_NAME: ${{ github.event_name }}
