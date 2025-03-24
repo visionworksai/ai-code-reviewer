@@ -99,7 +99,7 @@ runs:
       shell: bash
 
     - name: Run AI Code Reviewer
-      run: python ${{ github.action_path }}/visionworks_code_reviewer.py
+      run: python3 ${{ github.action_path }}/visionworks_code_reviewer.py
       shell: bash
       env:
         GEMINI_API_KEY: ${{ inputs.GEMINI_API_KEY }}
