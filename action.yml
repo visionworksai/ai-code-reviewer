@@ -51,7 +51,6 @@ inputs:
   GEMINI_API_KEY:
     description: "Google Gemini API key"
     required: false
-    default: "gemini-1.5-flash-001"
 
   GEMINI_MODEL:
     description: "Gemini model name"
@@ -59,7 +58,7 @@ inputs:
     default: "gemini-1.5-flash-001"
 
   OPENAI_API_KEY:
-    description: "OpenAI openai API key"
+    description: "OpenAI API key"
     required: false
 
   OPENAI_MODEL:
@@ -108,7 +107,6 @@ runs:
         elif [[ "$AI_MODEL_TYPE" == "gemini" && -z "${{ inputs.GEMINI_API_KEY }}" ]]; then
           echo "❌ GEMINI_API_KEY is missing. Please add it to your repo secrets."
           exit 1
-        
         fi
       shell: bash
 
@@ -117,8 +115,19 @@ runs:
       with:
         python-version: "3.10"
 
-    - name: Install dependencies
-      run: pip install -r ${{ github.action_path }}/requirements.txt
+    - name: Run install_script.sh
+      run: |
+        chmod +x ${{ github.action_path }}/install_script.sh
+        ${{ github.action_path }}/install_script.sh
+      shell: bash
+
+    - name: Install Python dependencies
+      run: |
+        export CC=$(which gcc)
+        export CXX=$(which g++)
+        export CMAKE_ARGS="-DCMAKE_C_COMPILER=$CC -DCMAKE_CXX_COMPILER=$CXX"
+        python -m pip install --upgrade pip setuptools wheel scikit-build-core
+        python -m pip install -r ${{ github.action_path }}/requirements.txt
       shell: bash
 
     - name: Run AI Code Reviewer
@@ -145,4 +154,3 @@ runs:
         GITHUB_TOKEN: ${{ github.token }}
         GITHUB_EVENT_PATH: ${{ github.event_path }}
         GITHUB_EVENT_NAME: ${{ github.event_name }}
-
