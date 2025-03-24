@@ -1,5 +1,5 @@
 name: AI Code Reviewer
-description: "PR changes are reviewed by Gemini / openai / Claude"
+description: "PR changes are reviewed by Gemini / OpenAI / Claude"
 author: "visionworksai"
 
 inputs:
@@ -81,6 +81,7 @@ inputs:
 runs:
   using: "composite"
   steps:
+
     - name: Detect AI Model Type from PR comment
       id: detect_model
       run: |
@@ -96,16 +97,16 @@ runs:
         fi
       shell: bash
 
-    - name: Fail if required secret is missing
+    - name: Validate required API keys
       run: |
         if [[ "$AI_MODEL_TYPE" == "openai" && -z "${{ inputs.OPENAI_API_KEY }}" ]]; then
-          echo "❌ OPENAI_API_KEY is missing. Please add it to your repo secrets."
+          echo "❌ Missing OPENAI_API_KEY"
           exit 1
         elif [[ "$AI_MODEL_TYPE" == "claude" && -z "${{ inputs.CLAUDE_API_KEY }}" ]]; then
-          echo "❌ CLAUDE_API_KEY is missing. Please add it to your repo secrets."
+          echo "❌ Missing CLAUDE_API_KEY"
           exit 1
         elif [[ "$AI_MODEL_TYPE" == "gemini" && -z "${{ inputs.GEMINI_API_KEY }}" ]]; then
-          echo "❌ GEMINI_API_KEY is missing. Please add it to your repo secrets."
+          echo "❌ Missing GEMINI_API_KEY"
           exit 1
         fi
       shell: bash
@@ -115,22 +116,15 @@ runs:
       with:
         python-version: "3.10"
 
-    - name: Set compiler environment variables
-      run: |
-        echo "CC=$(which gcc)" >> $GITHUB_ENV
-        echo "CXX=$(which g++)" >> $GITHUB_ENV
-        echo "CMAKE_ARGS=-DCMAKE_C_COMPILER=$(which gcc) -DCMAKE_CXX_COMPILER=$(which g++)" >> $GITHUB_ENV
-      shell: bash
-
     - name: Install Python dependencies
       run: |
         python -m pip install --upgrade pip setuptools wheel scikit-build-core
         python -m pip install --verbose --no-cache-dir -r ${{ github.action_path }}/requirements.txt
       shell: bash
       env:
-        CC: ${{ env.CC }}
-        CXX: ${{ env.CXX }}
-        CMAKE_ARGS: ${{ env.CMAKE_ARGS }}
+        CC: gcc
+        CXX: g++
+        CMAKE_ARGS: -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++
 
     - name: Run AI Code Reviewer
       run: python ${{ github.action_path }}/visionworks_code_reviewer.py

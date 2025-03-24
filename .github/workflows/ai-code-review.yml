@@ -40,6 +40,20 @@ jobs:
           sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 100
           sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 100
 
+      - name: Verify compilers and cmake
+        run: |
+          which gcc
+          which g++
+          gcc --version
+          g++ --version
+          cmake --version
+
+      - name: Install Python dependencies manually (ensures CC/CXX are respected)
+        run: |
+          python3 -m pip install --upgrade pip setuptools wheel scikit-build-core
+          CC=gcc CXX=g++ CMAKE_ARGS="-DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++" \
+          python3 -m pip install --force-reinstall --no-cache-dir -r requirements.txt
+
       - name: Run AI Code Reviewer Action
         uses: ./  # local action in the root directory
         with:
