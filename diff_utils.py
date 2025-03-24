@@ -1,7 +1,6 @@
 from typing import List, Dict, Any
 import re
 
-# def git_diff_parser(diff_str: str) -> List[Dict[str, Any]]:
 def parse_git_diff(diff_str: str) -> List[Dict[str, Any]]:
     """
     Parse a git diff string into a structured format for processing.
