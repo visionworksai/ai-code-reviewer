@@ -7,40 +7,40 @@ on:
 permissions: write-all
 
 jobs:
-  ai-code-review:
-    if: github.event.issue.pull_request && (
-          contains(github.event.comment.body, '/gemini-review') ||
-          contains(github.event.comment.body, '/openai-review') ||
-          contains(github.event.comment.body, '/claude-review')
-        )
+  ai-review:
+    if: |
+      github.event.issue.pull_request &&
+      (
+        contains(github.event.comment.body, '/gemini-review') ||
+        contains(github.event.comment.body, '/openai-review') ||
+        contains(github.event.comment.body, '/claude-review')
+      )
     runs-on: self-hosted
 
     steps:
-      - name: Checkout repo
+      - name: Checkout repository
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
-      - name: Set up Python
+      - name: Set up Python 3.10
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
 
-      - name: Install dependencies
+      - name: Install requirements
         run: pip install -r requirements.txt
 
-      - name: Set AI Model Type
-        id: detect_model
+      - name: Detect AI model
+        id: model
         run: |
-          if [[ "${{ github.event.comment.body }}" == *"/openai-review"* ]]; then
-            echo "model_type=openai" >> $GITHUB_OUTPUT
-          elif [[ "${{ github.event.comment.body }}" == *"/claude-review"* ]]; then
-            echo "model_type=claude" >> $GITHUB_OUTPUT
-          else
-            echo "model_type=gemini" >> $GITHUB_OUTPUT
-          fi
+          case "${{ github.event.comment.body }}" in
+            *"/openai-review"*) echo "model_type=openai" ;;
+            *"/claude-review"*) echo "model_type=claude" ;;
+            *) echo "model_type=gemini" ;;
+          esac >> "$GITHUB_OUTPUT"
 
-      - name: Run AI Code Review
+      - name: Run code review
         env:
           GITHUB_TOKEN: ${{ github.token }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
@@ -48,6 +48,6 @@ jobs:
           CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
           GITHUB_EVENT_PATH: ${{ github.event_path }}
           GITHUB_EVENT_NAME: ${{ github.event_name }}
-          AI_MODEL_TYPE: ${{ steps.detect_model.outputs.model_type }}
+          AI_MODEL_TYPE: ${{ steps.model.outputs.model_type }}
           INPUT_EXCLUDE: "*.md, docs/**, *.json"
         run: python visionworks_code_reviewer.py
