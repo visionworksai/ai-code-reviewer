@@ -15,8 +15,7 @@ jobs:
         contains(github.event.comment.body, '/claude-review') ||
         contains(github.event.comment.body, '/llama-review')
       )
-
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repo
@@ -24,36 +23,12 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
+      - name: Run AI Code Reviewer Action
+        uses: ./  # local action in the root directory
         with:
-          python-version: "3.10"
-
-      - name: Install Python dependencies
-        run: |
-          export CC=$(which gcc)
-          export CXX=$(which g++)
-          export CMAKE_ARGS="-DCMAKE_C_COMPILER=$CC -DCMAKE_CXX_COMPILER=$CXX"
-          python3 -m pip install --upgrade pip setuptools wheel scikit-build-core
-          python3 -m pip install --verbose --force-reinstall --no-cache-dir -r requirements.txt
-        shell: bash
-
-      - name: Set AI Model Type
-        id: detect_model
-        run: |
-          if [[ "${{ github.event.comment.body }}" == *"/openai-review"* ]]; then
-            echo "model_type=openai" >> $GITHUB_OUTPUT
-          elif [[ "${{ github.event.comment.body }}" == *"/claude-review"* ]]; then
-            echo "model_type=claude" >> $GITHUB_OUTPUT
-          elif [[ "${{ github.event.comment.body }}" == *"/llama-review"* ]]; then
-            echo "model_type=llama" >> $GITHUB_OUTPUT
-          else
-            echo "model_type=gemini" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Run AI Code Review
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
           LLAMA_MODEL_PATH: ${{ secrets.LLAMA_MODEL_PATH }}
           LLAMA_CONTEXT_SIZE: ${{ secrets.LLAMA_CONTEXT_SIZE }}
           LLAMA_GPU_LAYERS: ${{ secrets.LLAMA_GPU_LAYERS }}
@@ -63,11 +38,4 @@ jobs:
           LLAMA_TOP_P: ${{ secrets.LLAMA_TOP_P }}
           LLAMA_MAX_TOKENS: ${{ secrets.LLAMA_MAX_TOKENS }}
           LLAMA_REPEAT_PENALTY: ${{ secrets.LLAMA_REPEAT_PENALTY }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
-          GITHUB_EVENT_PATH: ${{ github.event_path }}
-          GITHUB_EVENT_NAME: ${{ github.event_name }}
-          AI_MODEL_TYPE: ${{ steps.detect_model.outputs.model_type }}
           INPUT_EXCLUDE: "*.md, docs/**, *.json"
-        run: python visionworks_code_reviewer.py
