@@ -12,8 +12,8 @@ inputs:
   CLAUDE_API_KEY: { description: "Claude API key", required: false }
   CLAUDE_MODEL:   { description: "Claude model name", required: false, default: "claude-3-sonnet-20240229" }
 
-  DEEPSEEK_API_KEY: { description: "DeepSeek API key", required: false }
-  DEEPSEEK_MODEL:   { description: "DeepSeek model name", required: false, default: "deepseek-reasoner" }
+  # DEEPSEEK_API_KEY: { description: "DeepSeek API key", required: false }
+  # DEEPSEEK_MODEL:   { description: "DeepSeek model name", required: false, default: "deepseek-reasoner" }
 
   INPUT_EXCLUDE: { description: "Comma-separated list of excluded file patterns", required: false, default: "" }
 
