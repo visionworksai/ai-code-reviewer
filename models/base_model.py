@@ -19,7 +19,7 @@ class BaseAIModel(ABC):
         pass
     
     @abstractmethod
-    def get_ai_response(self, prompt: str) -> List[Dict[str, str]]:
+    def get_response_from_model(self, prompt: str) -> List[Dict[str, str]]:
         """
         Send prompt to AI model and get structured response for code review.
         

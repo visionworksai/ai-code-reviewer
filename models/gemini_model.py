@@ -24,7 +24,7 @@ class GeminiModel(BaseAIModel):
             raise ValueError("GEMINI_API_KEY environment variable is required")
         Client.configure(api_key=api_key)
         
-    def get_ai_response(self, prompt: str) -> List[Dict[str, str]]:
+    def get_response_from_model(self, prompt: str) -> List[Dict[str, str]]:
         """
         Send prompt to Gemini API and parse the structured response.
         
