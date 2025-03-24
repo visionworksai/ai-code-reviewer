@@ -35,6 +35,12 @@ jobs:
             python3-pip \
             ninja-build
 
+      - name: Set compiler environment variables
+        run: |
+          echo "CC=$(which gcc-11)" >> $GITHUB_ENV
+          echo "CXX=$(which g++-11)" >> $GITHUB_ENV
+          echo "CMAKE_ARGS=-DCMAKE_C_COMPILER=$(which gcc-11) -DCMAKE_CXX_COMPILER=$(which g++-11)" >> $GITHUB_ENV
+
       - name: Run AI Code Reviewer Action
         uses: ./  # local action in the root directory
         with:
