@@ -43,9 +43,12 @@ jobs:
           CC: gcc
           CXX: g++
 
-
       - name: Install dependencies
         run: pip install -r requirements.txt
+        env:
+          CC: gcc
+          CXX: g++
+
 
       - name: Set AI Model Type
         id: detect_model
