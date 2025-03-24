@@ -3,46 +3,37 @@ description: "PR changes are reviewed by Gemini / OpenAI / Claude"
 author: "visionworksai"
 
 inputs:
-
   LLAMA_MODEL_PATH:
     description: "Path to the local GGUF model file"
     required: false
-
   LLAMA_CONTEXT_SIZE:
     description: "Context size for llama.cpp"
     required: false
     default: "4096"
-
   LLAMA_GPU_LAYERS:
     description: "Number of GPU layers for llama.cpp"
     required: false
     default: "-1"
-
   LLAMA_SEED:
     description: "Random seed for llama.cpp"
     required: false
     default: "42"
-
   LLAMA_THREADS:
     description: "Number of CPU threads to use"
     required: false
     default: "4"
-
   LLAMA_TEMPERATURE:
     description: "Temperature for model generation"
     required: false
     default: "0.1"
-
   LLAMA_TOP_P:
     description: "Top-p sampling value"
     required: false
     default: "0.95"
-
   LLAMA_MAX_TOKENS:
     description: "Max tokens for output"
     required: false
     default: "2048"
-
   LLAMA_REPEAT_PENALTY:
     description: "Repeat penalty value"
     required: false
@@ -51,7 +42,6 @@ inputs:
   GEMINI_API_KEY:
     description: "Google Gemini API key"
     required: false
-
   GEMINI_MODEL:
     description: "Gemini model name"
     required: false
@@ -60,7 +50,6 @@ inputs:
   OPENAI_API_KEY:
     description: "OpenAI API key"
     required: false
-
   OPENAI_MODEL:
     description: "OpenAI model name"
     required: false
@@ -68,7 +57,6 @@ inputs:
   CLAUDE_API_KEY:
     description: "Anthropic Claude API key"
     required: false
-
   CLAUDE_MODEL:
     description: "Claude model name"
     required: false
@@ -81,7 +69,6 @@ inputs:
 runs:
   using: "composite"
   steps:
-
     - name: Detect AI Model Type from PR comment
       id: detect_model
       run: |
@@ -110,21 +97,6 @@ runs:
           exit 1
         fi
       shell: bash
-
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: "3.10"
-
-    - name: Install Python dependencies
-      run: |
-        python -m pip install --upgrade pip setuptools wheel scikit-build-core
-        python -m pip install --verbose --no-cache-dir -r ${{ github.action_path }}/requirements.txt
-      shell: bash
-      env:
-        CC: gcc
-        CXX: g++
-        CMAKE_ARGS: -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++
 
     - name: Run AI Code Reviewer
       run: python ${{ github.action_path }}/visionworks_code_reviewer.py
