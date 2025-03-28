@@ -92,38 +92,29 @@ runs:
         fi
       shell: bash
 
-    - name: Install Ollama (patched install.sh) and start server
+    - name: Start Ollama via Docker and pull model if needed
       if: env.AI_MODEL_TYPE == 'deepseek'
       run: |
-        echo "🛠 Installing Ollama without sudo using official install.sh"
+        echo "🐳 Starting Ollama via Docker..."
 
-        mkdir -p $HOME/.local/bin
-        export PATH="$HOME/.local/bin:$PATH"
-        echo "$HOME/.local/bin" >> $GITHUB_PATH
-
-        curl -fsSL https://ollama.com/install.sh -o install.sh
-
-        echo "🧹 Patching install.sh to avoid sudo, root checks, and use user-local bin"
-        sed -i 's|/usr/local/bin|'"$HOME/.local/bin"'|g' install.sh
-        sed -i 's|/usr/local/lib|'"$HOME/.local/lib"'|g' install.sh
-        sed -i '/sudo/d' install.sh
-        sed -i '/error "/d' install.sh
-        sed -i '/if \[ "\$EUID" -ne 0 \]; then/,/fi/d' install.sh
-
-
-        bash install.sh
-
-        echo "🚀 Starting Ollama server..."
-        nohup $HOME/.local/bin/ollama serve > /dev/null 2>&1 &
-        sleep 5
+        if ! docker ps | grep -q ollama; then
+          docker run -d --name ollama \
+            -p 11434:11434 \
+            -v ollama-data:/root/.ollama \
+            ollama/ollama
+          sleep 5
+        else
+          echo "✅ Ollama container is already running"
+        fi
 
         MODEL_NAME="${{ inputs.DEEPSEEK_MODEL_NAME }}"
-        echo "📦 Checking if model $MODEL_NAME is pulled..."
-        if ! $HOME/.local/bin/ollama list | grep -q "$MODEL_NAME"; then
-          echo "⬇️ Pulling model: $MODEL_NAME"
-          $HOME/.local/bin/ollama pull "$MODEL_NAME"
+        echo "📦 Checking if model $MODEL_NAME is available..."
+
+        if ! docker exec ollama ollama list | grep -q "$MODEL_NAME"; then
+          echo "⬇️ Pulling model $MODEL_NAME..."
+          docker exec ollama ollama pull "$MODEL_NAME"
         else
-          echo "✅ Model already available: $MODEL_NAME"
+          echo "✅ Model already exists: $MODEL_NAME"
         fi
       shell: bash
 
