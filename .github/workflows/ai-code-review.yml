@@ -8,10 +8,12 @@ permissions: write-all
 
 jobs:
   ai-code-review:
-    if: github.event.issue.pull_request && (
-      contains(github.event.comment.body, '/gemini-review') ||
-      contains(github.event.comment.body, '/openai-review') ||
-      contains(github.event.comment.body, '/claude-review')
+    if: |
+      github.event.issue.pull_request && (
+        contains(github.event.comment.body, '/gemini-review') ||
+        contains(github.event.comment.body, '/openai-review') ||
+        contains(github.event.comment.body, '/claude-review') ||
+        contains(github.event.comment.body, '/local-review')
       )
 
     runs-on: self-hosted
@@ -27,6 +29,38 @@ jobs:
         with:
           python-version: "3.10"
 
+      - name: Install system packages and Python dependencies
+        run: |
+          apt-get update
+          apt-get install -y \
+            build-essential \
+            cmake \
+            gcc-11 \
+            g++-11 \
+            python3-dev \
+            python3-pip
+
+          echo "✅ gcc: $(which gcc)"
+          echo "✅ g++: $(which g++)"
+          echo "✅ cmake: $(which cmake)"
+
+          chmod +x install_script.sh
+          ./install_script.sh
+
+          python3 -m pip install --upgrade pip setuptools wheel
+          python3 -m pip install -r requirements.txt
+
+      - name: Setup Ollama for DeepSeek (if needed)
+        if: contains(github.event.comment.body, '/local-review')
+        run: |
+          if ! command -v ollama &> /dev/null; then
+            echo "Installing Ollama..."
+            curl -fsSL https://ollama.com/install.sh | sh
+          fi
+
+          echo "Pulling DeepSeek model..."
+          ollama pull deepseek-r1:1.5b
+
       - name: Set AI Model Type
         id: detect_model
         run: |
@@ -34,6 +68,8 @@ jobs:
             echo "model_type=openai" >> $GITHUB_OUTPUT
           elif [[ "${{ github.event.comment.body }}" == *"/claude-review"* ]]; then
             echo "model_type=claude" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.event.comment.body }}" == *"/local-review"* ]]; then
+            echo "model_type=deepseek" >> $GITHUB_OUTPUT
           else
             echo "model_type=gemini" >> $GITHUB_OUTPUT
           fi
@@ -41,6 +77,13 @@ jobs:
       - name: Run AI Code Review
         env:
           GITHUB_TOKEN: ${{ github.token }}
+          # DeepSeek/Ollama configuration
+          DEEPSEEK_MODEL_NAME: "deepseek-r1:1.5b"
+          DEEPSEEK_TEMPERATURE: "0.1"
+          DEEPSEEK_TOP_P: "0.95"
+          DEEPSEEK_MAX_TOKENS: "2048"
+          OLLAMA_URL: "http://localhost:11434"
+          # Other model configurations
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
