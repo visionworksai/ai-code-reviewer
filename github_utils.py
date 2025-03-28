@@ -268,12 +268,14 @@ def generate_review_prompt(file: PatchedFile, hunk: Hunk, pr_details: PRInfo) ->
     Returns:
         Formatted prompt string to send to the AI model
     """
-    return f"""Your task is reviewing pull requests. Instructions:
-    - Provide the response in following JSON format:  {{"reviews": [{{"lineNumber":  <line_number>, "reviewComment": "<review comment>"}}]}}
-    - Provide comments and suggestions ONLY if there is something to improve, otherwise "reviews" should be an empty array.
+    return f"""Your task is reviewing pull requests. IMPORTANT INSTRUCTIONS:
+    - RESPOND ONLY WITH JSON in the exact format shown below. Do not include any explanations.
+    - The JSON format must be:  {{"reviews": [{{"lineNumber":  <line_number>, "reviewComment": "<review comment>"}}]}}
+    - If there's nothing to improve, return {{"reviews": []}} - an empty array.
+    - Line numbers should refer to the line in the provided diff (count yourself)
     - Use GitHub Markdown in comments
     - Focus on bugs, security issues, and performance problems
-    - IMPORTANT: NEVER suggest adding comments to the code
+    - NEVER suggest adding comments to the code
 
 Review the following code diff in the file "{file.path}" and take the pull request title and description into account when writing the response.
 
@@ -289,6 +291,8 @@ Git diff to review:
 ```diff
 {hunk.content}
 ```
+
+REMEMBER: Your ENTIRE response must be valid JSON in the format {{"reviews": [...]}} with no other text.
 """
 
 def create_github_comment(file: FileInfo, hunk: Hunk, model_response: List[Dict[str, str]]) -> List[Dict[str, Any]]:
