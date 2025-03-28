@@ -268,11 +268,17 @@ def generate_review_prompt(file: PatchedFile, hunk: Hunk, pr_details: PRInfo) ->
     Returns:
         Formatted prompt string to send to the AI model
     """
+    # Count lines in the hunk to help with line number references
+    lines = hunk.content.split('\n')
+    line_count = len(lines)
+    
     return f"""Your task is reviewing pull requests. IMPORTANT INSTRUCTIONS:
     - RESPOND ONLY WITH JSON in the exact format shown below. Do not include any explanations.
     - The JSON format must be:  {{"reviews": [{{"lineNumber":  <line_number>, "reviewComment": "<review comment>"}}]}}
     - If there's nothing to improve, return {{"reviews": []}} - an empty array.
-    - Line numbers should refer to the line in the provided diff (count yourself)
+    - CRITICALLY IMPORTANT: Line numbers must be accurate and correspond to the diff below.
+    - The diff has {line_count} lines. Line numbers should be between 1 and {line_count}.
+    - The first line of the diff starts with line 1, the second with line 2, and so on.
     - Use GitHub Markdown in comments
     - Focus on bugs, security issues, and performance problems
     - NEVER suggest adding comments to the code
@@ -293,6 +299,7 @@ Git diff to review:
 ```
 
 REMEMBER: Your ENTIRE response must be valid JSON in the format {{"reviews": [...]}} with no other text.
+The lineNumber field MUST refer to the line number in the diff above (1 to {line_count}).
 """
 
 def create_github_comment(file: FileInfo, hunk: Hunk, model_response: List[Dict[str, str]]) -> List[Dict[str, Any]]:
@@ -309,25 +316,45 @@ def create_github_comment(file: FileInfo, hunk: Hunk, model_response: List[Dict[
     """
     print(f"Processing {len(model_response)} AI review suggestions")
     
+    # Determine the maximum line number in the hunk for validation
+    hunk_lines = hunk.content.split("\n")
+    max_line_number = len(hunk_lines)
+    
     created_github_comments = []
     for review in model_response:
         try:
             # Extract line number from AI response
             model_response_line_number = int(review["lineNumber"])
             
-            # Validate line number is within the hunk's range
-            if model_response_line_number < 1 or model_response_line_number > hunk.source_length:
-                print(f"Warning: Line number {model_response_line_number} is outside the valid range")
-                continue
-
+            # Make sure the line number is within valid range
+            if model_response_line_number < 1:
+                print(f"Warning: Line number {model_response_line_number} is less than 1, using line 1 instead")
+                model_response_line_number = 1
+            elif model_response_line_number > max_line_number:
+                print(f"Warning: Line number {model_response_line_number} exceeds max lines in hunk ({max_line_number}), using last line instead")
+                model_response_line_number = max_line_number
+            
+            # Calculate position in the diff (required by GitHub API) - this is relative to the hunk header
+            # First, count how many lines are in the hunk header (usually just one line with @@ -x,y +a,b @@)
+            hunk_header_lines = 1
+            
+            # Convert the model's line number to a position in the diff
+            # The position is the line number relative to hunk start plus the header lines
+            # For example, if the AI says "line 5" in a hunk that starts at line 3, position would be (5-3)+1 = 3
+            diff_position = model_response_line_number
+            
+            print(f"Line number from model: {model_response_line_number}, calculated diff position: {diff_position}")
+            
             # Create comment object in GitHub-compatible format
             comment = {
                 "body": review["reviewComment"],
                 "path": file.path,
-                "position": model_response_line_number
+                "position": diff_position,
+                "line": model_response_line_number,  # Adding explicit line number
+                "side": "RIGHT"  # Comments are on the new version of the code (right side)
             }
             created_github_comments.append(comment)
-            print(f"Created comment for line {model_response_line_number}")
+            print(f"Created comment for line {model_response_line_number} (position {diff_position})")
 
         except (KeyError, TypeError, ValueError) as e:
             print(f"Error creating comment: {e}")

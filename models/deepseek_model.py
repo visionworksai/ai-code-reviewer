@@ -18,7 +18,7 @@ class DeepSeekModel(BaseAIModel):
         
         # Use deepseek-r1:1.5b model by default, but allow users to choose a larger model
         # Available models include: deepseek-r1:1.5b, deepseek-r1:3b, deepseek-r1:7b, deepseek-coder:7b
-        self.model_name = os.environ.get("DEEPSEEK_MODEL_NAME", "deepseek-r1:1.5b")
+        self.model_name = os.environ.get("DEEPSEEK_MODEL_NAME", "deepseek-coder:1.3b")
         
         # Log available models for user reference
         print("Note: For better JSON formatting, consider using a larger DeepSeek model:")
@@ -82,10 +82,15 @@ class DeepSeekModel(BaseAIModel):
         IMPORTANT: Your response MUST be a valid JSON array with objects containing 'lineNumber' and 'reviewComment' fields.
         You MUST format your entire response as a single JSON array, nothing else.
         
+        ABOUT LINE NUMBERS:
+        - Line numbers in your response must correspond to the actual line numbers in the diff.
+        - Line 1 is the first line in the diff, Line 2 is the second line, and so on.
+        - Count lines from the top of the diff, including the hunk header line with @@ symbols.
+        
         JSON FORMAT EXAMPLE:
         [
-          {"lineNumber": 42, "reviewComment": "This loop could be optimized."},
-          {"lineNumber": 67, "reviewComment": "Potential null reference issue here."}
+          {"lineNumber": 5, "reviewComment": "This loop could be optimized."},
+          {"lineNumber": 12, "reviewComment": "Potential null reference issue here."}
         ]
         
         If you don't find any issues worth commenting on, respond with an empty array: []
@@ -232,28 +237,46 @@ class DeepSeekModel(BaseAIModel):
         current_line = None
         current_comment = []
         
-        for line in lines:
-            # Look for patterns like "Line 42:" or "Line: 42"
-            if line.lower().startswith("line") and ":" in line:
-                # If we were building a previous comment, save it
-                if current_line is not None and current_comment:
-                    comments.append({
-                        "lineNumber": current_line,
-                        "reviewComment": " ".join(current_comment).strip()
-                    })
+        # More comprehensive pattern matching for line numbers
+        line_patterns = [
+            r'(?:^|\s)(?:line|Line|LINE)(?:\s*#?\s*|:\s*)(\d+)',  # Line 42 or Line: 42 or Line #42
+            r'(?:^|\s)(?:L|l)ine(?:\s*number)?(?:\s*#?\s*|:\s*)(\d+)',  # Line number 42 
+            r'(?:^|\s)(?:at|At|AT)(?:\s+)(?:line|Line|LINE)(?:\s*#?\s*|:\s*)(\d+)',  # At line 42
+            r'(?:^|\s)(?:on|On|ON)(?:\s+)(?:line|Line|LINE)(?:\s*#?\s*|:\s*)(\d+)'   # On line 42
+        ]
                 
-                # Start a new comment
-                parts = line.split(":", 1)
-                try:
-                    # Extract line number
-                    line_text = parts[0].lower().replace("line", "").strip()
-                    current_line = int(line_text)
-                    current_comment = [parts[1].strip()] if len(parts) > 1 else []
-                except (ValueError, IndexError):
-                    current_line = None
-                    current_comment = []
-            elif current_line is not None:
-                # Continue building the current comment
+        for line in lines:
+            # Check if this line contains a line number reference
+            line_number = None
+            for pattern in line_patterns:
+                match = re.search(pattern, line)
+                if match:
+                    try:
+                        line_number = int(match.group(1))
+                        # If we found a line number in this new line
+                        if current_line is not None and current_comment:
+                            # Save the previous comment
+                            comments.append({
+                                "lineNumber": current_line,
+                                "reviewComment": " ".join(current_comment).strip()
+                            })
+                            current_comment = []
+                        
+                        # Start a new comment
+                        current_line = line_number
+                        # Get comment part (everything after the line number)
+                        comment_part = line[match.end():].strip()
+                        if comment_part:
+                            current_comment = [comment_part]
+                        else:
+                            current_comment = []
+                        break
+                    except (ValueError, IndexError):
+                        pass
+            
+            # If this line doesn't have a line number but we're building a comment
+            if line_number is None and current_line is not None:
+                # Add this line to the current comment
                 current_comment.append(line.strip())
         
         # Don't forget the last comment
@@ -267,6 +290,14 @@ class DeepSeekModel(BaseAIModel):
         if comments:
             print(f"DEBUG - Found {len(comments)} comments via line-by-line parsing")
             return comments
+            
+        # If nothing worked and there's any text, create a generic comment
+        if text.strip():
+            print("DEBUG - Creating generic comment at line 1")
+            return [{
+                "lineNumber": 1,  # Default to line 1
+                "reviewComment": "**Code Review:** " + text.strip()
+            }]
             
         # If nothing worked, return empty list
         print("DEBUG - Could not extract any structured comments from model response")
