@@ -8,7 +8,6 @@ inputs:
     required: false
     default: "deepseek-coder:6.7b"
 
-
   DEEPSEEK_TEMPERATURE:
     description: "Temperature for DeepSeek model generation"
     required: false
@@ -96,23 +95,29 @@ runs:
     - name: Start Ollama via Docker and pull model if needed
       if: env.AI_MODEL_TYPE == 'deepseek'
       run: |
-        echo "🐳 Starting Ollama via Docker..."
+        echo "🐳 Ensuring Ollama container is running..."
 
-        if ! docker ps | grep -q ollama; then
+        MODEL_NAME="${{ inputs.DEEPSEEK_MODEL_NAME }}"
+
+        # If container doesn't exist, run it
+        if ! docker ps -a --format '{{.Names}}' | grep -q '^ollama$'; then
+          echo "🚀 Ollama container not found. Creating and starting..."
           docker run -d --name ollama \
             -p 11434:11434 \
             -v ollama-data:/root/.ollama \
             ollama/ollama
           sleep 5
+        elif ! docker ps --format '{{.Names}}' | grep -q '^ollama$'; then
+          echo "🔄 Ollama container exists but not running. Starting..."
+          docker start ollama
+          sleep 5
         else
           echo "✅ Ollama container is already running"
         fi
 
-        MODEL_NAME="${{ inputs.DEEPSEEK_MODEL_NAME }}"
         echo "📦 Checking if model $MODEL_NAME is available..."
-
         if ! docker exec ollama ollama list | grep -q "$MODEL_NAME"; then
-          echo "⬇️ Pulling model $MODEL_NAME..."
+          echo "⬇️ Pulling model: $MODEL_NAME..."
           docker exec ollama ollama pull "$MODEL_NAME"
         else
           echo "✅ Model already exists: $MODEL_NAME"
@@ -154,3 +159,10 @@ runs:
         GITHUB_TOKEN: ${{ github.token }}
         GITHUB_EVENT_PATH: ${{ github.event_path }}
         GITHUB_EVENT_NAME: ${{ github.event_name }}
+
+    - name: Stop Ollama container after run
+      if: env.AI_MODEL_TYPE == 'deepseek'
+      run: |
+        echo "🛑 Stopping Ollama container..."
+        docker stop ollama
+      shell: bash
