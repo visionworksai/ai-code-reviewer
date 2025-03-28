@@ -107,9 +107,9 @@ runs:
         sed -i 's|/usr/local/bin|'"$HOME/.local/bin"'|g' install.sh
         sed -i 's|/usr/local/lib|'"$HOME/.local/lib"'|g' install.sh
         sed -i '/sudo/d' install.sh
-        sed -i '/EUID/d' install.sh
-        sed -i '/exit 1/d' install.sh
         sed -i '/error "/d' install.sh
+        sed -i '/if \[ "\$EUID" -ne 0 \]; then/,/fi/d' install.sh
+
 
         bash install.sh
 
