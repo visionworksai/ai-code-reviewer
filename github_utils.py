@@ -244,60 +244,17 @@ def make_comment_for_review(
     pr = repo_obj.get_pull(pull_number)
     
     try:
-        # First, get the latest commit SHA for the PR
-        latest_commit = pr.get_commits().reversed[0]
-        commit_id = latest_commit.sha
-        print(f"Using commit SHA: {commit_id}")
-        
-        # Instead of using create_review, use create_comment for each comment
-        successful_comments = 0
-        for comment in comments:
-            try:
-                # When using create_review_comment, we need to use 'position' parameter for line
-                pr.create_review_comment(
-                    body=comment["body"],
-                    commit_id=commit_id,
-                    path=comment["path"],
-                    position=comment["position"] # Position in the diff
-                )
-                successful_comments += 1
-                print(f"Successfully posted comment on line {comment['position']}")
-            except Exception as e:
-                print(f"Error posting individual comment: {str(e)}")
-                print(f"Comment data: {json.dumps(comment, indent=2)}")
-                
-                # Try an alternative approach if the first one fails
-                try:
-                    print("Trying alternative approach with 'line' instead of 'position'...")
-                    pr.create_review_comment(
-                        body=comment["body"],
-                        commit_id=commit_id,
-                        path=comment["path"],
-                        line=comment["position"]
-                    )
-                    successful_comments += 1
-                    print(f"Successfully posted comment on line {comment['position']} using alternative approach")
-                except Exception as alt_e:
-                    print(f"Alternative approach also failed: {str(alt_e)}")
-        
-        print(f"Successfully posted {successful_comments} out of {len(comments)} comments")
+        # Create the review with comments
+        review = pr.create_review(
+            body="Comments from Code Reviewer",
+            comments=comments,
+            event="COMMENT"  # Post as regular comments, not approvals or rejections
+        )
+        print(f"Review successfully posted with ID: {review.id}")
 
     except Exception as e:
-        print(f"Error during review process: {str(e)}")
+        print(f"Error posting review to GitHub: {str(e)}")
         print(f"Comment payload: {json.dumps(comments, indent=2)}")
-        
-        # If the error is related to specific fields, give more detailed information
-        if "'line'" in str(e):
-            print("\nHelp: The GitHub API expects 'line' for the line number in the file.")
-        elif "'commit_id'" in str(e):
-            print("\nHelp: The 'commit_id' parameter is required and must be a valid commit SHA.")
-        elif "'position'" in str(e):
-            print("\nHelp: The 'position' parameter refers to the line position in the diff.")
-            
-        # Suggest installing a newer version of PyGithub
-        print("\nNote: GitHub API and PyGithub library both evolve over time.")
-        print("Consider upgrading PyGithub: pip install --upgrade PyGithub")
-        print("Or check the latest PyGithub documentation for the correct parameters.")
 
 def generate_review_prompt(file: PatchedFile, hunk: Hunk, pr_details: PRInfo) -> str:
     """
@@ -311,17 +268,11 @@ def generate_review_prompt(file: PatchedFile, hunk: Hunk, pr_details: PRInfo) ->
     Returns:
         Formatted prompt string to send to the AI model
     """
-    # Count lines in the hunk to help with line number references
-    lines = hunk.content.split('\n')
-    line_count = len(lines)
-    
     return f"""Your task is reviewing pull requests. IMPORTANT INSTRUCTIONS:
     - RESPOND ONLY WITH JSON in the exact format shown below. Do not include any explanations.
     - The JSON format must be:  {{"reviews": [{{"lineNumber":  <line_number>, "reviewComment": "<review comment>"}}]}}
     - If there's nothing to improve, return {{"reviews": []}} - an empty array.
-    - CRITICALLY IMPORTANT: Line numbers must be accurate and correspond to the diff below.
-    - The diff has {line_count} lines. Line numbers should be between 1 and {line_count}.
-    - The first line of the diff starts with line 1, the second with line 2, and so on.
+    - Line numbers should refer to the line in the provided diff (count yourself)
     - Use GitHub Markdown in comments
     - Focus on bugs, security issues, and performance problems
     - NEVER suggest adding comments to the code
@@ -342,7 +293,6 @@ Git diff to review:
 ```
 
 REMEMBER: Your ENTIRE response must be valid JSON in the format {{"reviews": [...]}} with no other text.
-The lineNumber field MUST refer to the line number in the diff above (1 to {line_count}).
 """
 
 def create_github_comment(file: FileInfo, hunk: Hunk, model_response: List[Dict[str, str]]) -> List[Dict[str, Any]]:
@@ -359,33 +309,30 @@ def create_github_comment(file: FileInfo, hunk: Hunk, model_response: List[Dict[
     """
     print(f"Processing {len(model_response)} AI review suggestions")
     
-    # Determine the maximum line number in the hunk for validation
-    hunk_lines = hunk.content.split("\n")
-    max_line_number = len(hunk_lines)
-    
     created_github_comments = []
     for review in model_response:
         try:
             # Extract line number from AI response
             model_response_line_number = int(review["lineNumber"])
             
-            # Make sure the line number is within valid range
-            if model_response_line_number < 1:
-                print(f"Warning: Line number {model_response_line_number} is less than 1, using line 1 instead")
-                model_response_line_number = 1
-            elif model_response_line_number > max_line_number:
-                print(f"Warning: Line number {model_response_line_number} exceeds max lines in hunk ({max_line_number}), using last line instead")
-                model_response_line_number = max_line_number
+            # Validate line number is within the hunk's range
+            if model_response_line_number < 1 or model_response_line_number > hunk.source_length:
+                print(f"Warning: Line number {model_response_line_number} is outside the valid range")
+                continue
+
+            # Calculate the correct position within the diff
+            # Position is calculated relative to the start of the hunk in the diff
+            # For GitHub PR comments, the position is the line number in the diff, not in the file
+            position = model_response_line_number
             
-            # Create comment object - keeping it simple with just the essential fields
-            # PyGithub create_review_comment requires body, path, and position/line
+            # Create comment object in GitHub-compatible format
             comment = {
                 "body": review["reviewComment"],
                 "path": file.path,
-                "position": model_response_line_number  # This will be used as the line parameter
+                "position": position
             }
             created_github_comments.append(comment)
-            print(f"Created comment for line {model_response_line_number}")
+            print(f"Created comment for line {model_response_line_number}, diff position {position}")
 
         except (KeyError, TypeError, ValueError) as e:
             print(f"Error creating comment: {e}")
