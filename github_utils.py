@@ -244,29 +244,60 @@ def make_comment_for_review(
     pr = repo_obj.get_pull(pull_number)
     
     try:
-        # Create a list of review comment objects with the correct structure for GitHub API
-        review_comments = []
+        # First, get the latest commit SHA for the PR
+        latest_commit = pr.get_commits().reversed[0]
+        commit_id = latest_commit.sha
+        print(f"Using commit SHA: {commit_id}")
+        
+        # Instead of using create_review, use create_comment for each comment
+        successful_comments = 0
         for comment in comments:
-            # Extract required fields - for the GitHub API, we need to use position (not line)
-            # The position parameter is what GitHub API expects for PR review comments
-            review_comment = {
-                "path": comment["path"],
-                "body": comment["body"],
-                "position": comment["line"]  # Use the line number as the position
-            }
-            review_comments.append(review_comment)
-            
-        # Create the review with comments
-        review = pr.create_review(
-            body="Comments from Code Reviewer",
-            comments=review_comments,
-            event="COMMENT"  # Post as regular comments, not approvals or rejections
-        )
-        print(f"Review successfully posted with ID: {review.id}")
+            try:
+                # When using create_review_comment, we need to use 'position' parameter for line
+                pr.create_review_comment(
+                    body=comment["body"],
+                    commit_id=commit_id,
+                    path=comment["path"],
+                    position=comment["position"] # Position in the diff
+                )
+                successful_comments += 1
+                print(f"Successfully posted comment on line {comment['position']}")
+            except Exception as e:
+                print(f"Error posting individual comment: {str(e)}")
+                print(f"Comment data: {json.dumps(comment, indent=2)}")
+                
+                # Try an alternative approach if the first one fails
+                try:
+                    print("Trying alternative approach with 'line' instead of 'position'...")
+                    pr.create_review_comment(
+                        body=comment["body"],
+                        commit_id=commit_id,
+                        path=comment["path"],
+                        line=comment["position"]
+                    )
+                    successful_comments += 1
+                    print(f"Successfully posted comment on line {comment['position']} using alternative approach")
+                except Exception as alt_e:
+                    print(f"Alternative approach also failed: {str(alt_e)}")
+        
+        print(f"Successfully posted {successful_comments} out of {len(comments)} comments")
 
     except Exception as e:
-        print(f"Error posting review to GitHub: {str(e)}")
+        print(f"Error during review process: {str(e)}")
         print(f"Comment payload: {json.dumps(comments, indent=2)}")
+        
+        # If the error is related to specific fields, give more detailed information
+        if "'line'" in str(e):
+            print("\nHelp: The GitHub API expects 'line' for the line number in the file.")
+        elif "'commit_id'" in str(e):
+            print("\nHelp: The 'commit_id' parameter is required and must be a valid commit SHA.")
+        elif "'position'" in str(e):
+            print("\nHelp: The 'position' parameter refers to the line position in the diff.")
+            
+        # Suggest installing a newer version of PyGithub
+        print("\nNote: GitHub API and PyGithub library both evolve over time.")
+        print("Consider upgrading PyGithub: pip install --upgrade PyGithub")
+        print("Or check the latest PyGithub documentation for the correct parameters.")
 
 def generate_review_prompt(file: PatchedFile, hunk: Hunk, pr_details: PRInfo) -> str:
     """
@@ -346,12 +377,12 @@ def create_github_comment(file: FileInfo, hunk: Hunk, model_response: List[Dict[
                 print(f"Warning: Line number {model_response_line_number} exceeds max lines in hunk ({max_line_number}), using last line instead")
                 model_response_line_number = max_line_number
             
-            # Create comment object in GitHub-compatible format
-            # For the GitHub API, we need path and position (the latter is the line number in the diff)
+            # Create comment object - keeping it simple with just the essential fields
+            # PyGithub create_review_comment requires body, path, and position/line
             comment = {
                 "body": review["reviewComment"],
                 "path": file.path,
-                "position": model_response_line_number  # Position in the diff, which is what GitHub API expects
+                "position": model_response_line_number  # This will be used as the line parameter
             }
             created_github_comments.append(comment)
             print(f"Created comment for line {model_response_line_number}")
