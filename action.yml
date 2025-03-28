@@ -70,7 +70,7 @@ runs:
           echo "AI_MODEL_TYPE=openai" >> $GITHUB_ENV
         elif [[ "$body" == *"/claude-review"* ]]; then
           echo "AI_MODEL_TYPE=claude" >> $GITHUB_ENV
-        elif [[ "$body" == *"/deepseek-review"* ]]; then
+        elif [[ "$body" == *"/local-review"* ]]; then
           echo "AI_MODEL_TYPE=deepseek" >> $GITHUB_ENV
         else
           echo "AI_MODEL_TYPE=gemini" >> $GITHUB_ENV

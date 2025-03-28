@@ -23,7 +23,7 @@ def get_ai_model(model_type: str):
         return OpenAIModel()
     elif model_type.lower() == "claude":
         return ClaudeModel()
-    elif model_type.lower() in ["deepseek", "ollama", "local"]:
+    elif model_type.lower() in ["deepseek", "local"]:
         return DeepSeekModel()
     else:
-        raise ValueError(f"Unsupported AI model type: {model_type}") 
+        raise ValueError(f"Unsupported AI model type: {model_type}")
