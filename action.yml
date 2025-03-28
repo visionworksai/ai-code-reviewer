@@ -6,7 +6,8 @@ inputs:
   DEEPSEEK_MODEL_NAME:
     description: "Name of the DeepSeek model to use with Ollama"
     required: false
-    default: "deepseek-r1:1.5b"
+    default: "deepseek-coder:6.7b"
+
 
   DEEPSEEK_TEMPERATURE:
     description: "Temperature for DeepSeek model generation"
