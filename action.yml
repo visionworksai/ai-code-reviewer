@@ -109,6 +109,7 @@ runs:
         sed -i '/sudo/d' install.sh
         sed -i '/EUID/d' install.sh
         sed -i '/exit 1/d' install.sh
+        sed -i '/error "/d' install.sh
 
         bash install.sh
 
