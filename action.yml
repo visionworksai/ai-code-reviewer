@@ -103,10 +103,12 @@ runs:
 
         curl -fsSL https://ollama.com/install.sh -o install.sh
 
-        echo "🧹 Patching install.sh to avoid sudo and use user-local bin"
+        echo "🧹 Patching install.sh to avoid sudo, root checks, and use user-local bin"
         sed -i 's|/usr/local/bin|'"$HOME/.local/bin"'|g' install.sh
         sed -i 's|/usr/local/lib|'"$HOME/.local/lib"'|g' install.sh
         sed -i '/sudo/d' install.sh
+        sed -i '/EUID/d' install.sh
+        sed -i '/exit 1/d' install.sh
 
         bash install.sh
 
