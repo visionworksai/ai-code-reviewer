@@ -2,14 +2,14 @@ from .base_model import BaseAIModel
 from .gemini_model import GeminiModel
 from .openai_model import OpenAIModel
 from .claude_model import ClaudeModel
-from .llama_cpp_model import LlamaCppModel
+from .deepseek_model import DeepSeekModel
 
 def get_ai_model(model_type: str):
     """
     Factory method to get the appropriate AI model based on configuration.
     
     Args:
-        model_type: Type of AI model to use ("gemini", "openai", "claude", or "llama")
+        model_type: Type of AI model to use ("gemini", "openai", "claude", or "deepseek")
         
     Returns:
         An instance of BaseAIModel
@@ -23,7 +23,7 @@ def get_ai_model(model_type: str):
         return OpenAIModel()
     elif model_type.lower() == "claude":
         return ClaudeModel()
-    elif model_type.lower() in ["llama", "llamacpp", "llama-cpp"]:
-        return LlamaCppModel()
+    elif model_type.lower() in ["deepseek", "ollama", "local"]:
+        return DeepSeekModel()
     else:
         raise ValueError(f"Unsupported AI model type: {model_type}") 
