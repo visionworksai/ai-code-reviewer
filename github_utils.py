@@ -316,7 +316,7 @@ def create_github_comment(file: FileInfo, hunk: Hunk, model_response: List[Dict[
             model_response_line_number = int(review["lineNumber"])
             
             # Validate line number is within the hunk's range
-            if model_response_line_number < 1 or model_response_line_number > hunk.source_length:
+            if model_response_line_number < 1 or model_response_line_number > hunk.content.count('\n') + 1:
                 print(f"Warning: Line number {model_response_line_number} is outside the valid range")
                 continue
 
@@ -329,7 +329,7 @@ def create_github_comment(file: FileInfo, hunk: Hunk, model_response: List[Dict[
             comment = {
                 "body": review["reviewComment"],
                 "path": file.path,
-                "position": position
+                "position": model_response_line_number
             }
             created_github_comments.append(comment)
             print(f"Created comment for line {model_response_line_number}, diff position {position}")
