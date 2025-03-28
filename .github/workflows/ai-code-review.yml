@@ -1,4 +1,4 @@
-name: AI Code Reviewer
+name: AI Code Review
 
 on:
   issue_comment:
@@ -15,71 +15,15 @@ jobs:
         contains(github.event.comment.body, '/claude-review') ||
         contains(github.event.comment.body, '/local-review')
       )
-
     runs-on: self-hosted
 
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+
+      - name: Run AI Reviewer
+        uses: visionworksai/ai-code-reviewer@main
         with:
-          fetch-depth: 0
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.10"
-
-      - name: Install system packages and Python dependencies
-        run: |
-          python3 -m pip install -r requirements.txt
-
-      - name: Set up Ollama and DeepSeek (if needed)
-        if: contains(github.event.comment.body, '/local-review')
-        run: |
-          echo "🔍 Checking if Ollama is installed..."
-          if ! command -v ollama &> /dev/null; then
-            echo "⚙️ Ollama not found, installing..."
-            curl -fsSL https://ollama.com/install.sh | sh
-          else
-            echo "✅ Ollama already installed."
-          fi
-
-          echo "🔍 Checking if DeepSeek model is available..."
-          if ! ollama list | grep -q "deepseek-r1.*1.5b"; then
-            echo "⬇️ Pulling DeepSeek-R1:1.5b model..."
-            ollama pull deepseek-r1:1.5b
-          else
-            echo "✅ DeepSeek-R1:1.5b model already available."
-          fi
-
-      - name: Set AI Model Type
-        id: detect_model
-        run: |
-          if [[ "${{ github.event.comment.body }}" == *"/openai-review"* ]]; then
-            echo "model_type=openai" >> $GITHUB_OUTPUT
-          elif [[ "${{ github.event.comment.body }}" == *"/claude-review"* ]]; then
-            echo "model_type=claude" >> $GITHUB_OUTPUT
-          elif [[ "${{ github.event.comment.body }}" == *"/local-review"* ]]; then
-            echo "model_type=deepseek" >> $GITHUB_OUTPUT
-          else
-            echo "model_type=gemini" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Run AI Code Review
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-          # DeepSeek/Ollama configuration
-          DEEPSEEK_MODEL_NAME: "deepseek-coder:6.7b"
-          DEEPSEEK_TEMPERATURE: "0.1"
-          DEEPSEEK_TOP_P: "0.95"
-          DEEPSEEK_MAX_TOKENS: "2048"
-          OLLAMA_URL: "http://localhost:11434"
-          # Other model configurations
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
-          GITHUB_EVENT_PATH: ${{ github.event_path }}
-          GITHUB_EVENT_NAME: ${{ github.event_name }}
-          AI_MODEL_TYPE: ${{ steps.detect_model.outputs.model_type }}
           INPUT_EXCLUDE: "*.md, docs/**, *.json"
-        run: python visionworks_code_reviewer.py
