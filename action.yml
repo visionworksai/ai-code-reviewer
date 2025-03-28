@@ -1,5 +1,5 @@
 name: AI Code Reviewer
-description: "PR changes are reviewed by Gemini / openai / Claude / DeepSeek"
+description: "PR changes are reviewed by Gemini / OpenAI / Claude / DeepSeek"
 author: "visionworksai"
 
 inputs:
@@ -31,7 +31,6 @@ inputs:
   GEMINI_API_KEY:
     description: "Google Gemini API key"
     required: false
-    default: "gemini-1.5-flash-001"
 
   GEMINI_MODEL:
     description: "Gemini model name"
@@ -39,12 +38,13 @@ inputs:
     default: "gemini-1.5-flash-001"
 
   OPENAI_API_KEY:
-    description: "OpenAI openai API key"
+    description: "OpenAI API key"
     required: false
 
   OPENAI_MODEL:
     description: "OpenAI model name"
     required: false
+    default: "gpt-4"
 
   CLAUDE_API_KEY:
     description: "Anthropic Claude API key"
@@ -53,6 +53,7 @@ inputs:
   CLAUDE_MODEL:
     description: "Claude model name"
     required: false
+    default: "claude-3-opus-20240229"
 
   INPUT_EXCLUDE:
     description: "Files or folders to exclude from AI review"
@@ -91,16 +92,24 @@ runs:
         fi
       shell: bash
 
-    - name: Setup Ollama for DeepSeek (if needed)
+    - name: Setup Ollama and DeepSeek (if needed)
       if: env.AI_MODEL_TYPE == 'deepseek'
       run: |
         if ! command -v ollama &> /dev/null; then
           echo "Installing Ollama..."
           curl -fsSL https://ollama.com/install.sh | sh
+        else
+          echo "✅ Ollama already installed."
         fi
 
-        echo "Pulling DeepSeek model..."
-        ollama pull ${{ inputs.DEEPSEEK_MODEL_NAME }}
+        MODEL_NAME="${{ inputs.DEEPSEEK_MODEL_NAME }}"
+        echo "Checking if model $MODEL_NAME is available..."
+        if ! ollama list | grep -q "$MODEL_NAME"; then
+          echo "Pulling model: $MODEL_NAME"
+          ollama pull "$MODEL_NAME"
+        else
+          echo "✅ Model already available: $MODEL_NAME"
+        fi
       shell: bash
 
     - name: Set up Python
@@ -111,7 +120,11 @@ runs:
     - name: Install Python dependencies
       run: |
         python -m pip install --upgrade pip setuptools wheel
-        python -m pip install -r ${{ github.action_path }}/requirements.txt
+        if [ -f "${{ github.action_path }}/requirements.txt" ]; then
+          pip install -r ${{ github.action_path }}/requirements.txt
+        else
+          echo "⚠️ No requirements.txt found, skipping Python dependency install"
+        fi
       shell: bash
 
     - name: Run AI Code Reviewer
