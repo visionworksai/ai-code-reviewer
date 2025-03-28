@@ -103,6 +103,15 @@ runs:
           echo "✅ Ollama is already installed."
         fi
 
+        echo "🧠 Checking if Ollama server is running..."
+        if ! nc -z localhost 11434; then
+          echo "🚀 Ollama server not running. Starting..."
+          nohup ollama serve > /dev/null 2>&1 &
+          sleep 5
+        else
+          echo "✅ Ollama server is already running."
+        fi
+
         MODEL_NAME="${{ inputs.DEEPSEEK_MODEL_NAME }}"
         echo "🔍 Checking if model $MODEL_NAME is pulled..."
         if ! ollama list | grep -q "$MODEL_NAME"; then
