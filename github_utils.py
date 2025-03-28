@@ -244,10 +244,22 @@ def make_comment_for_review(
     pr = repo_obj.get_pull(pull_number)
     
     try:
+        # Create a list of review comment objects with the correct structure for GitHub API
+        review_comments = []
+        for comment in comments:
+            # Extract required fields - for the GitHub API, we need to use position (not line)
+            # The position parameter is what GitHub API expects for PR review comments
+            review_comment = {
+                "path": comment["path"],
+                "body": comment["body"],
+                "position": comment["line"]  # Use the line number as the position
+            }
+            review_comments.append(review_comment)
+            
         # Create the review with comments
         review = pr.create_review(
             body="Comments from Code Reviewer",
-            comments=comments,
+            comments=review_comments,
             event="COMMENT"  # Post as regular comments, not approvals or rejections
         )
         print(f"Review successfully posted with ID: {review.id}")
@@ -334,27 +346,15 @@ def create_github_comment(file: FileInfo, hunk: Hunk, model_response: List[Dict[
                 print(f"Warning: Line number {model_response_line_number} exceeds max lines in hunk ({max_line_number}), using last line instead")
                 model_response_line_number = max_line_number
             
-            # Calculate position in the diff (required by GitHub API) - this is relative to the hunk header
-            # First, count how many lines are in the hunk header (usually just one line with @@ -x,y +a,b @@)
-            hunk_header_lines = 1
-            
-            # Convert the model's line number to a position in the diff
-            # The position is the line number relative to hunk start plus the header lines
-            # For example, if the AI says "line 5" in a hunk that starts at line 3, position would be (5-3)+1 = 3
-            diff_position = model_response_line_number
-            
-            print(f"Line number from model: {model_response_line_number}, calculated diff position: {diff_position}")
-            
             # Create comment object in GitHub-compatible format
+            # For the GitHub API, we need path and position (the latter is the line number in the diff)
             comment = {
                 "body": review["reviewComment"],
                 "path": file.path,
-                "position": diff_position,
-                "line": model_response_line_number,  # Adding explicit line number
-                "side": "RIGHT"  # Comments are on the new version of the code (right side)
+                "position": model_response_line_number  # Position in the diff, which is what GitHub API expects
             }
             created_github_comments.append(comment)
-            print(f"Created comment for line {model_response_line_number} (position {diff_position})")
+            print(f"Created comment for line {model_response_line_number}")
 
         except (KeyError, TypeError, ValueError) as e:
             print(f"Error creating comment: {e}")
