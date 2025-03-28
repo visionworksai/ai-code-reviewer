@@ -92,11 +92,19 @@ runs:
         fi
       shell: bash
 
-    - name: Ensure DeepSeek model is pulled (no install)
+    - name: Setup Ollama and DeepSeek model (if needed)
       if: env.AI_MODEL_TYPE == 'deepseek'
       run: |
+        echo "🔍 Checking if Ollama is installed..."
+        if ! command -v ollama &> /dev/null; then
+          echo "⚙️ Ollama not found. Installing..."
+          curl -fsSL https://ollama.com/install.sh | sh
+        else
+          echo "✅ Ollama is already installed."
+        fi
+
         MODEL_NAME="${{ inputs.DEEPSEEK_MODEL_NAME }}"
-        echo "🔍 Checking if model $MODEL_NAME is available..."
+        echo "🔍 Checking if model $MODEL_NAME is pulled..."
         if ! ollama list | grep -q "$MODEL_NAME"; then
           echo "⬇️ Pulling model: $MODEL_NAME"
           ollama pull "$MODEL_NAME"
