@@ -92,31 +92,33 @@ runs:
         fi
       shell: bash
 
-    - name: Setup Ollama and DeepSeek model (if needed)
+    - name: Install Ollama locally (no sudo) and start server
       if: env.AI_MODEL_TYPE == 'deepseek'
       run: |
-        echo "🔍 Checking if Ollama is installed..."
-        if ! command -v ollama &> /dev/null; then
-          echo "⚙️ Ollama not found. Installing..."
-          curl -fsSL https://ollama.com/install.sh | sh
+        echo "🧪 Preparing local Ollama installation..."
+
+        mkdir -p $HOME/ollama-bin
+
+        if [ ! -f "$HOME/ollama-bin/ollama" ]; then
+          echo "⬇️ Downloading Ollama..."
+          curl -fsSL https://ollama.com/download/Ollama-linux-x64.tar.gz | tar -xz -C $HOME/ollama-bin
+          chmod +x $HOME/ollama-bin/ollama
         else
-          echo "✅ Ollama is already installed."
+          echo "✅ Ollama already downloaded."
         fi
 
-        echo "🧠 Checking if Ollama server is running..."
-        if ! nc -z localhost 11434; then
-          echo "🚀 Ollama server not running. Starting..."
-          nohup ollama serve > /dev/null 2>&1 &
-          sleep 5
-        else
-          echo "✅ Ollama server is already running."
-        fi
+        echo "$HOME/ollama-bin" >> $GITHUB_PATH
+        export PATH="$HOME/ollama-bin:$PATH"
+
+        echo "🚀 Starting Ollama server..."
+        nohup $HOME/ollama-bin/ollama serve > /dev/null 2>&1 &
+        sleep 5
 
         MODEL_NAME="${{ inputs.DEEPSEEK_MODEL_NAME }}"
-        echo "🔍 Checking if model $MODEL_NAME is pulled..."
-        if ! ollama list | grep -q "$MODEL_NAME"; then
+        echo "📦 Checking if model $MODEL_NAME is pulled..."
+        if ! $HOME/ollama-bin/ollama list | grep -q "$MODEL_NAME"; then
           echo "⬇️ Pulling model: $MODEL_NAME"
-          ollama pull "$MODEL_NAME"
+          $HOME/ollama-bin/ollama pull "$MODEL_NAME"
         else
           echo "✅ Model already available: $MODEL_NAME"
         fi
