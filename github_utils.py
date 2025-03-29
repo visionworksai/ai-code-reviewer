@@ -325,16 +325,9 @@ def create_github_comment(file: FileInfo, hunk: Hunk, model_response: List[Dict[
             # For GitHub PR comments, the position is the line number in the diff, not in the file
             position = model_response_line_number
             
-            # Calculate the actual file line number
-            file_line_number = hunk.target_start + model_response_line_number - 1
-            
-            # Append the line number and file name to the comment
-            comment_body = review["reviewComment"]
-            comment_body += f"\n\n(line: {file_line_number} - {file.path})"
-            
             # Create comment object in GitHub-compatible format
             comment = {
-                "body": comment_body,
+                "body": review["reviewComment"],
                 "path": file.path,
                 "position": model_response_line_number
             }
